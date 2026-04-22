@@ -5,4 +5,4 @@ builder = "nixpacks"
 startCommand = "node server.js"
 healthcheckPath = "/"
 healthcheckTimeout = 30
-restartPolicyType = "on-failure"
+restartPolicyType = "ON_FAILURE"
