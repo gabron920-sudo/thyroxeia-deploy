@@ -2,7 +2,9 @@
  * /payment  — PayPal order creation & server-side capture verification
  *
  * POST /payment
- * Body: { action: 'create-order' | 'capture-order', payload: { plan, userId, orderId? } }
+ * Requires: Authorization: Bearer <supabase_jwt>
+ * Body: { action: 'create-order' | 'capture-order', payload: { plan, orderId? } }
+ * NOTE: userId is always taken from the verified JWT — never from request body
  */
 
 import { Router }     from 'express'
@@ -17,7 +19,6 @@ const PAYPAL_API           = PAYPAL_MODE === 'sandbox'
   ? 'https://api-m.sandbox.paypal.com'
   : 'https://api-m.paypal.com'
 
-// ── Updated plan prices (monthly) ────────────────────────────────────────────
 const PLAN_PRICES = {
   student: { amount: '110.00', currency: 'PHP', label: 'Thyroxeia AI — Student Plan (Monthly)' },
   pro:     { amount: '220.00', currency: 'PHP', label: 'Thyroxeia AI — Pro Plan (Monthly)'     },
@@ -27,6 +28,20 @@ const PLAN_PRICES = {
 const sb = (process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_KEY)
   ? createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY)
   : null
+
+// ── JWT Auth Middleware ───────────────────────────────────────────────────────
+async function requireAuth(req, res, next) {
+  const authHeader = req.headers.authorization || ''
+  const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null
+  if (!token) return res.status(401).json({ error: 'Authentication required.' })
+  if (!sb) return res.status(500).json({ error: 'Auth service not configured.' })
+
+  const { data: { user }, error } = await sb.auth.getUser(token)
+  if (error || !user) return res.status(401).json({ error: 'Invalid or expired session. Please log in again.' })
+
+  req.user = user
+  next()
+}
 
 // ── PayPal token cache ────────────────────────────────────────────────────────
 let _ppToken = null, _ppTokenExpires = 0
@@ -66,20 +81,22 @@ async function ppFetch(path, options = {}) {
   return body
 }
 
-// ── POST /payment ─────────────────────────────────────────────────────────────
-router.post('/', async (req, res) => {
+// ── POST /payment — requires valid JWT ────────────────────────────────────────
+router.post('/', requireAuth, async (req, res) => {
   const { action, payload } = req.body || {}
   if (!action || !payload) return res.status(400).json({ error: 'Missing action or payload' })
   if (!PAYPAL_CLIENT_ID || !PAYPAL_CLIENT_SECRET) {
     return res.status(500).json({ error: 'PayPal credentials not configured on server' })
   }
 
+  // userId always comes from the verified JWT — never from the request body
+  const userId = req.user.id
+
   try {
-    // ── CREATE ORDER ──────────────────────────────────────────────────────
+    // ── CREATE ORDER ─────────────────────────────────────────────────────────
     if (action === 'create-order') {
-      const { plan, userId } = payload
+      const { plan } = payload
       if (!PLAN_PRICES[plan]) return res.status(400).json({ error: 'Invalid plan: ' + plan })
-      if (!userId) return res.status(400).json({ error: 'Missing userId' })
 
       const price = PLAN_PRICES[plan]
       const order = await ppFetch('/v2/checkout/orders', {
@@ -89,7 +106,7 @@ router.post('/', async (req, res) => {
           purchase_units: [{
             amount: { currency_code: price.currency, value: price.amount },
             description: price.label,
-            custom_id: `${userId}::${plan}`,  // security: ties order to specific user+plan
+            custom_id: `${userId}::${plan}`,  // ties order to verified user+plan
           }],
           application_context: {
             brand_name: 'Thyroxeia AI',
@@ -101,20 +118,20 @@ router.post('/', async (req, res) => {
       return res.json({ orderId: order.id })
     }
 
-    // ── CAPTURE ORDER ──────────────────────────────────────────────────────
+    // ── CAPTURE ORDER ─────────────────────────────────────────────────────────
     if (action === 'capture-order') {
-      const { orderId, plan, userId } = payload
-      if (!orderId || !plan || !userId) return res.status(400).json({ error: 'Missing orderId/plan/userId' })
+      const { orderId, plan } = payload
+      if (!orderId || !plan) return res.status(400).json({ error: 'Missing orderId or plan' })
       if (!PLAN_PRICES[plan]) return res.status(400).json({ error: 'Invalid plan: ' + plan })
 
       const capture = await ppFetch(`/v2/checkout/orders/${orderId}/capture`, { method: 'POST' })
 
-      // ── Server-side verification (critical security checks) ───────────
+      // ── Server-side verification ──────────────────────────────────────────
       const unit          = capture.purchase_units?.[0]
       const captureDetail = unit?.payments?.captures?.[0]
-      const status        = captureDetail?.status        // must be 'COMPLETED'
-      const amtValue      = captureDetail?.amount?.value // must match plan price
-      const customId      = unit?.custom_id || ''        // must match userId::plan
+      const status        = captureDetail?.status
+      const amtValue      = captureDetail?.amount?.value
+      const customId      = unit?.custom_id || ''
       const expected      = PLAN_PRICES[plan].amount
 
       if (status !== 'COMPLETED') {
@@ -125,12 +142,13 @@ router.post('/', async (req, res) => {
         console.warn('[Payment] Amount mismatch:', amtValue, 'expected', expected)
         return res.json({ success: false, reason: 'Amount mismatch — possible manipulation' })
       }
+      // Verify the order was created for THIS authenticated user
       if (!customId.startsWith(userId) || !customId.includes(plan)) {
-        console.warn('[Payment] custom_id mismatch:', customId)
+        console.warn('[Payment] custom_id mismatch:', customId, 'for user', userId)
         return res.json({ success: false, reason: 'Order metadata mismatch' })
       }
 
-      // ── Persist to Supabase ────────────────────────────────────────────
+      // ── Persist to Supabase ───────────────────────────────────────────────
       if (sb) {
         const { error: upsertErr } = await sb.from('profiles').upsert({
           id: userId,
@@ -139,19 +157,17 @@ router.post('/', async (req, res) => {
           plan_activated_at: new Date().toISOString(),
         }, { onConflict: 'id' })
         if (upsertErr) console.error('[Supabase profiles upsert]', upsertErr.message)
-      } else {
-        console.warn('[Payment] Supabase not configured — plan not saved to DB')
       }
 
       console.log(`[Payment] ✅ ${plan} activated for user ${userId}, order ${orderId}`)
-      return res.json({ success: true, orderId, plan, userId })
+      return res.json({ success: true, orderId, plan })
     }
 
     return res.status(400).json({ error: 'Unknown action: ' + action })
 
   } catch (err) {
     console.error('[Payment route error]', err.message)
-    res.status(500).json({ error: err.message })
+    res.status(500).json({ error: 'Payment processing failed. Please try again.' })
   }
 })
 
