@@ -116,7 +116,7 @@ router.post('/', async (req, res) => {
 
   } catch (err) {
     console.error('[AI Exception]', err.message)
-    res.status(500).json({ error: err.message })
+    res.status(500).json({ error: 'AI request failed. Please try again.' })
   }
 })
 

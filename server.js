@@ -60,17 +60,18 @@ const ALLOWED_ORIGINS = new Set([
   'https://thyroxeia-deploy-production.up.railway.app',
 ].filter(Boolean))
 
-app.use(cors({
+const corsOptions = {
   origin: (origin, cb) => {
-    // FIX: Reject null/missing origins — prevents file:// and sandboxed iframe CSRF
+    // Reject null/missing origins — prevents file:// and sandboxed iframe CSRF
     if (!origin) return cb(new Error('CORS: requests without origin are not allowed'))
     if (ALLOWED_ORIGINS.has(origin)) return cb(null, true)
     cb(new Error(`CORS: origin ${origin} not allowed`))
   },
   methods: ['GET', 'POST', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
-}))
-app.options('*', cors())
+}
+app.use(cors(corsOptions))
+app.options('*', cors(corsOptions))  // FIX: preflight must use same strict origin check
 app.use(express.json({ limit: '2mb' }))
 
 // ── Global Rate Limiters ──────────────────────────────────────────────────────

@@ -19,7 +19,23 @@
 import { Router }     from 'express'
 import nodemailer     from 'nodemailer'
 import { createClient } from '@supabase/supabase-js'
-import { randomInt }  from 'crypto'
+import { randomInt, createHash } from 'crypto'
+
+// ── OTP attempt tracking (in-memory, per user_id) ─────────────────────────────
+const otpAttempts = new Map() // user_id → { count, resetAt }
+const OTP_MAX_ATTEMPTS = 5
+function checkOtpAttempts(userId) {
+  const now = Date.now()
+  const entry = otpAttempts.get(userId)
+  if (!entry || entry.resetAt < now) {
+    otpAttempts.set(userId, { count: 1, resetAt: now + 15 * 60 * 1000 })
+    return true
+  }
+  if (entry.count >= OTP_MAX_ATTEMPTS) return false
+  entry.count++
+  return true
+}
+function clearOtpAttempts(userId) { otpAttempts.delete(userId) }
 
 const router = Router()
 
@@ -167,11 +183,14 @@ router.post('/send-otp', requireAuth, async (req, res) => {
     const otp = String(randomInt(100000, 999999))
     const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString() // 10 minutes
 
+    // Hash OTP before storing — plain value never touches the DB
+    const otpHash = createHash('sha256').update(otp).digest('hex')
+
     // Store OTP in Supabase (upsert — one OTP per user at a time)
     const { error: upsertErr } = await sb.from('otp_codes').upsert({
       user_id:    req.user.id,
       email:      email,
-      otp_hash:   otp, // In production, hash this: crypto.createHash('sha256').update(otp).digest('hex')
+      otp_hash:   otpHash,
       expires_at: expiresAt,
       used:       false,
     }, { onConflict: 'user_id' })
@@ -217,13 +236,20 @@ router.post('/verify-otp', requireAuth, async (req, res) => {
       return res.status(400).json({ error: 'Verification code has expired. Please request a new one.' })
     }
 
-    // Check OTP value
-    if (data.otp_hash !== otp) {
+    // Rate-limit OTP attempts
+    if (!checkOtpAttempts(req.user.id)) {
+      return res.status(429).json({ error: 'Too many attempts. Please request a new code.' })
+    }
+
+    // Check OTP value (compare against stored hash)
+    const inputHash = createHash('sha256').update(otp).digest('hex')
+    if (data.otp_hash !== inputHash) {
       return res.status(400).json({ error: 'Incorrect verification code.' })
     }
 
-    // Mark as used
+    // Mark as used & clear attempt counter
     await sb.from('otp_codes').update({ used: true }).eq('user_id', req.user.id)
+    clearOtpAttempts(req.user.id)
 
     console.log(`[OTP] ✅ Verified for user ${req.user.id}`)
     return res.json({ success: true })

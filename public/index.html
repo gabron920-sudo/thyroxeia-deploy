@@ -833,18 +833,8 @@ async function handleSignup(e) {
   btn.disabled = false; btn.textContent = '✨ Create Account'
   if (error) { toast(error.message, 'error'); return }
 
-  // Step 2: Railway backend sends our branded verification email (fire & forget)
-  // Supabase already sent the OTP — Railway backend sends a nicer branded version
-  try {
-    await backend(BACKEND.AUTH_EMAIL, {
-      action: 'send-verification',
-      payload: { email, firstName: first, otp: '(check your email from Supabase)' }
-    })
-  } catch(e) {
-    // Non-fatal — Supabase email still works as backup
-    console.warn('Branded email failed:', e.message)
-  }
-
+  // Store firstName for use after OTP verification
+  localStorage.setItem('verify_first_name', first)
   localStorage.setItem('verify_email', email)
   document.getElementById('verify-email-display').textContent = email
   showPage('verify')
@@ -874,7 +864,7 @@ async function handleVerify() {
   btn.disabled = true; btn.textContent = 'Verifying...'
 
   // OTP verification goes through Supabase (they issued it)
-  const { error } = await sb.auth.verifyOtp({ email, token: code, type: 'signup' })
+  const { data: verifyData, error } = await sb.auth.verifyOtp({ email, token: code, type: 'signup' })
 
   if (error) {
     toast(error.message || 'Invalid code. Please try again.', 'error')
@@ -882,15 +872,20 @@ async function handleVerify() {
     for (let i=0;i<6;i++) { const el = document.getElementById(`otp${i}`); if(el) el.value='' }
     document.getElementById('otp0').focus()
   } else {
+    const firstName = localStorage.getItem('verify_first_name') || ''
     localStorage.removeItem('verify_email')
+    localStorage.removeItem('verify_first_name')
     toast('Email verified! Welcome to Thyroxeia AI 🎉', 'success')
-    // Send welcome email via Railway backend
-    const meta = currentUser?.user_metadata || {}
+    // Send welcome email — use session from verifyOtp result (avoids timing issue with currentUser)
     try {
-      await backend(BACKEND.AUTH_EMAIL, {
-        action: 'send-welcome',
-        payload: { email, firstName: meta.first_name || '' }
-      })
+      const accessToken = verifyData?.session?.access_token
+      if (accessToken) {
+        await fetch(BACKEND.AUTH_EMAIL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + accessToken },
+          body: JSON.stringify({ action: 'send-welcome', payload: { firstName } })
+        })
+      }
     } catch(e) { /* non-fatal */ }
   }
 }
