@@ -62,7 +62,8 @@ const ALLOWED_ORIGINS = new Set([
 
 app.use(cors({
   origin: (origin, cb) => {
-    if (!origin) return cb(null, true) // same-origin / server-to-server
+    // FIX: Reject null/missing origins — prevents file:// and sandboxed iframe CSRF
+    if (!origin) return cb(new Error('CORS: requests without origin are not allowed'))
     if (ALLOWED_ORIGINS.has(origin)) return cb(null, true)
     cb(new Error(`CORS: origin ${origin} not allowed`))
   },
@@ -73,16 +74,14 @@ app.options('*', cors())
 app.use(express.json({ limit: '2mb' }))
 
 // ── Global Rate Limiters ──────────────────────────────────────────────────────
-// General limiter — all routes
 const globalLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 min
+  windowMs: 15 * 60 * 1000,
   max: 300,
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: 'Too many requests, please try again later.' },
 })
 
-// Strict limiter for auth/email (prevent spam)
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 15,
@@ -91,13 +90,21 @@ const authLimiter = rateLimit({
   message: { error: 'Too many email requests. Please wait before trying again.' },
 })
 
-// Payment limiter
 const paymentLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 30,
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: 'Too many payment requests. Please wait.' },
+})
+
+// FIX: Strict rate limiter for admin endpoints — 10 attempts / 15 min
+const adminLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many admin requests. Please wait.' },
 })
 
 app.use(globalLimiter)
@@ -116,8 +123,17 @@ app.get('/health', (_req, res) => {
   })
 })
 
+// ── PayPal client-id endpoint — serves from env, never hardcoded in HTML ─────
+// FIX: Frontend fetches this at runtime so the client-id is not baked into HTML
+app.get('/api/paypal-config', (_req, res) => {
+  const clientId = process.env.PAYPAL_CLIENT_ID
+  if (!clientId) return res.status(500).json({ error: 'PayPal not configured' })
+  res.json({ clientId, currency: 'PHP', intent: 'capture' })
+})
+
 // ── Admin: view users + payment proof (requires X-Admin-Key header) ───────────
-app.get('/admin/users', async (req, res) => {
+// FIX: Now protected by adminLimiter (max 10 req / 15 min)
+app.get('/admin/users', adminLimiter, async (req, res) => {
   const adminKey = req.headers['x-admin-key']
   if (!adminKey || adminKey !== process.env.ADMIN_KEY) {
     return res.status(403).json({ error: 'Forbidden — invalid admin key' })
@@ -155,12 +171,12 @@ app.get('/admin/users', async (req, res) => {
     res.json({ total: users.length, summary, users })
   } catch (err) {
     console.error('[Admin users error]', err.message)
-    res.status(500).json({ error: err.message })
+    res.status(500).json({ error: 'Internal error' })
   }
 })
 
 // ── Admin: AI usage stats ─────────────────────────────────────────────────────
-app.get('/admin/usage', async (req, res) => {
+app.get('/admin/usage', adminLimiter, async (req, res) => {
   const adminKey = req.headers['x-admin-key']
   if (!adminKey || adminKey !== process.env.ADMIN_KEY) {
     return res.status(403).json({ error: 'Forbidden — invalid admin key' })
@@ -178,7 +194,7 @@ app.get('/admin/usage', async (req, res) => {
 
     res.json({ date: today, total_calls_today: data?.length || 0, calls: data })
   } catch (err) {
-    res.status(500).json({ error: err.message })
+    res.status(500).json({ error: 'Internal error' })
   }
 })
 

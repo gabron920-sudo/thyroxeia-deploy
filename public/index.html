@@ -10,12 +10,24 @@
 <!-- Supabase (anon key is PUBLIC by design — safe in frontend) -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 
-<!--
-  PayPal SDK — client-id is PUBLIC (like Stripe publishable key).
-  The SECRET stays in the backend. Order create + capture go through Railway.
-  NOTE: Replace YOUR_PAYPAL_CLIENT_ID below with your actual client ID.
--->
-<script src="https://www.paypal.com/sdk/js?client-id=Acn3s6SAOb8iSxAwv_hxXBgPRIiWOrgTXuAoRCyN58xxhcr59N2d43DJpI77lIxsQ_jIc7er_uYGCs0W&currency=PHP&intent=capture&disable-funding=credit,card"></script>
+<!-- PayPal SDK loaded dynamically at runtime from /api/paypal-config (client-id not hardcoded) -->
+<script>
+async function loadPayPalSDK() {
+  try {
+    const res = await fetch('/api/paypal-config')
+    if (!res.ok) throw new Error('PayPal config unavailable')
+    const { clientId, currency, intent } = await res.json()
+    const script = document.createElement('script')
+    script.src = `https://www.paypal.com/sdk/js?client-id=${clientId}&currency=${currency}&intent=${intent}&disable-funding=credit,card`
+    script.onload = () => { window._paypalReady = true; document.dispatchEvent(new Event('paypal-ready')) }
+    script.onerror = () => console.warn('PayPal SDK failed to load')
+    document.head.appendChild(script)
+  } catch(e) {
+    console.warn('PayPal config fetch failed:', e.message)
+  }
+}
+loadPayPalSDK()
+</script>
 
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Space+Grotesk:wght@400;500;600;700;800&display=swap');
@@ -1429,7 +1441,8 @@ function closePaymentIfOutside(e) { if (e.target === document.getElementById('pa
 function renderPayPal(plan) {
   const container = document.getElementById('paypal-button-container')
   container.innerHTML = '<div style="text-align:center;padding:20px;color:var(--text3)">⏳ Loading PayPal...</div>'
-  setTimeout(() => {
+  // Wait for dynamically loaded PayPal SDK (loaded from /api/paypal-config)
+  const tryRender = () => {
     if (typeof paypal === 'undefined') {
       container.innerHTML = '<div style="color:var(--red);text-align:center;padding:12px">⚠️ PayPal failed to load. Disable ad-blockers and refresh.</div>'; return
     }
@@ -1494,7 +1507,15 @@ function renderPayPal(plan) {
         console.error('PayPal render failed:', err)
         container.innerHTML = '<div style="color:var(--red);padding:12px;text-align:center">⚠️ PayPal failed to render. Try refreshing.</div>'
       })
-  }, 400)
+  }
+  // If SDK already loaded, render immediately; otherwise wait for load event
+  if (window._paypalReady || typeof paypal !== 'undefined') {
+    tryRender()
+  } else {
+    document.addEventListener('paypal-ready', tryRender, { once: true })
+    // Fallback timeout after 8 seconds
+    setTimeout(() => { if (typeof paypal === 'undefined') tryRender() }, 8000)
+  }
 }
 
 function updatePlanChip() {

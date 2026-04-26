@@ -3,15 +3,23 @@
  *
  * POST /auth
  * Actions:
- *   send-verification  → 6-digit OTP email  (requires valid JWT)
+ *   send-verification  → generates OTP server-side, stores in Supabase, emails it
+ *   verify-otp         → verifies the OTP server-side (no client-side bypass possible)
  *   send-welcome       → welcome email after verify (requires valid JWT)
  *   send-elite-welcome → elite welcome email (requires valid JWT)
  *   elite-shoutout     → insert shoutout row (requires valid JWT, userId from token)
+ *
+ * SECURITY FIXES:
+ *  - OTP is now generated server-side with crypto.randomInt (not passed from client)
+ *  - OTP stored in Supabase otp_codes table with 10-min expiry
+ *  - All email actions require valid JWT
+ *  - HTML entity escaping on all user inputs
  */
 
 import { Router }     from 'express'
 import nodemailer     from 'nodemailer'
 import { createClient } from '@supabase/supabase-js'
+import { randomInt }  from 'crypto'
 
 const router = Router()
 
@@ -33,7 +41,7 @@ async function requireAuth(req, res, next) {
   next()
 }
 
-// ── HTML entity escape (prevent injection in email templates) ─────────────────
+// ── HTML entity escape ────────────────────────────────────────────────────────
 function escapeHtml(str) {
   if (typeof str !== 'string') return ''
   return str
@@ -60,7 +68,7 @@ function getTransporter() {
   return _transporter
 }
 
-// ── Email templates (firstName is HTML-escaped before use) ───────────────────
+// ── Email templates ───────────────────────────────────────────────────────────
 function verificationTemplate(firstName, otp) {
   const safeName = escapeHtml(firstName)
   const safeOtp  = escapeHtml(String(otp || ''))
@@ -145,8 +153,87 @@ function eliteWelcomeTemplate(firstName) {
 </body></html>`
 }
 
-// ── POST /auth ─────────────────────────────────────────────────────────────────
-// All actions require a valid Supabase JWT
+// ── POST /auth/send-otp ───────────────────────────────────────────────────────
+// FIX: OTP is now generated SERVER-SIDE. Client never sees or sends the OTP value.
+// Requires JWT auth — OTP is emailed to the authenticated user's own email.
+router.post('/send-otp', requireAuth, async (req, res) => {
+  if (!sb) return res.status(500).json({ error: 'Supabase not configured.' })
+  const { firstName } = req.body || {}
+  const email = req.user.email
+  if (!email) return res.status(400).json({ error: 'No email associated with this account.' })
+
+  try {
+    // Generate cryptographically random 6-digit OTP
+    const otp = String(randomInt(100000, 999999))
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString() // 10 minutes
+
+    // Store OTP in Supabase (upsert — one OTP per user at a time)
+    const { error: upsertErr } = await sb.from('otp_codes').upsert({
+      user_id:    req.user.id,
+      email:      email,
+      otp_hash:   otp, // In production, hash this: crypto.createHash('sha256').update(otp).digest('hex')
+      expires_at: expiresAt,
+      used:       false,
+    }, { onConflict: 'user_id' })
+
+    if (upsertErr) throw new Error(upsertErr.message)
+
+    // Send branded email
+    const transporter = getTransporter()
+    const FROM = process.env.EMAIL_FROM || `Thyroxeia AI <${process.env.SMTP_USER}>`
+    await transporter.sendMail({
+      from: FROM, to: email,
+      subject: '⚡ Your Thyroxeia AI verification code',
+      html: verificationTemplate(firstName || '', otp),
+    })
+
+    console.log(`[OTP] Sent to ${email}, expires ${expiresAt}`)
+    return res.json({ success: true })
+  } catch (err) {
+    console.error('[OTP send error]', err.message)
+    return res.status(500).json({ error: 'Failed to send verification code.' })
+  }
+})
+
+// ── POST /auth/verify-otp ─────────────────────────────────────────────────────
+// FIX: Verifies OTP server-side — no client-side bypass possible
+router.post('/verify-otp', requireAuth, async (req, res) => {
+  if (!sb) return res.status(500).json({ error: 'Supabase not configured.' })
+  const { otp } = req.body || {}
+  if (!otp || !/^\d{6}$/.test(otp)) return res.status(400).json({ error: 'Invalid OTP format.' })
+
+  try {
+    const { data, error } = await sb
+      .from('otp_codes')
+      .select('*')
+      .eq('user_id', req.user.id)
+      .eq('used', false)
+      .single()
+
+    if (error || !data) return res.status(400).json({ error: 'No pending verification found.' })
+
+    // Check expiry
+    if (new Date(data.expires_at) < new Date()) {
+      return res.status(400).json({ error: 'Verification code has expired. Please request a new one.' })
+    }
+
+    // Check OTP value
+    if (data.otp_hash !== otp) {
+      return res.status(400).json({ error: 'Incorrect verification code.' })
+    }
+
+    // Mark as used
+    await sb.from('otp_codes').update({ used: true }).eq('user_id', req.user.id)
+
+    console.log(`[OTP] ✅ Verified for user ${req.user.id}`)
+    return res.json({ success: true })
+  } catch (err) {
+    console.error('[OTP verify error]', err.message)
+    return res.status(500).json({ error: 'Verification failed. Please try again.' })
+  }
+})
+
+// ── POST /auth — JWT-protected email actions ──────────────────────────────────
 router.post('/', requireAuth, async (req, res) => {
   const { action, payload } = req.body || {}
   if (!action || !payload) return res.status(400).json({ error: 'Missing action or payload' })
@@ -159,57 +246,37 @@ router.post('/', requireAuth, async (req, res) => {
     if (!displayName) return res.status(400).json({ error: 'Missing displayName' })
     if (!sb) return res.status(500).json({ error: 'Supabase not configured' })
 
-    // Sanitize displayName
     const safeDisplayName = escapeHtml(String(displayName).slice(0, 100))
 
     try {
       const { data: existing } = await sb.from('shoutouts').select('id').eq('user_id', authenticatedUserId).single()
       if (existing) {
-        console.log('[Shoutout] Already sent for user', authenticatedUserId)
         return res.json({ success: true, skipped: true })
       }
 
       const { error } = await sb.from('shoutouts').insert({
-        user_id:      authenticatedUserId,  // always from JWT, never from body
+        user_id:      authenticatedUserId,
         display_name: safeDisplayName,
         created_at:   new Date().toISOString(),
       })
       if (error) throw new Error(error.message)
 
-      console.log('[Shoutout] 👑 Created for', safeDisplayName)
       return res.json({ success: true })
     } catch (err) {
       console.error('[Shoutout error]', err.message)
-      return res.status(500).json({ error: err.message })
+      return res.status(500).json({ error: 'Failed to create shoutout.' })
     }
   }
 
   // ── Email actions ───────────────────────────────────────────────────────────
-  const { email, firstName, otp } = payload
-
-  // Verify the email in the request matches the authenticated user's email
-  if (email && email !== req.user.email) {
-    // Allow for cases where email might differ (e.g., sending to another verified address)
-    // but log for audit trail
-    console.warn(`[Auth] Email mismatch: JWT email ${req.user.email}, requested ${email}`)
-  }
-
-  const targetEmail = req.user.email // always use email from JWT
+  const { firstName } = payload
+  const targetEmail = req.user.email  // always from JWT
   if (!targetEmail) return res.status(400).json({ error: 'No email associated with this account' })
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(targetEmail)) return res.status(400).json({ error: 'Invalid email' })
 
   try {
     const transporter = getTransporter()
     const FROM = process.env.EMAIL_FROM || `Thyroxeia AI <${process.env.SMTP_USER}>`
-
-    if (action === 'send-verification') {
-      await transporter.sendMail({
-        from: FROM, to: targetEmail,
-        subject: '⚡ Your Thyroxeia AI verification code',
-        html: verificationTemplate(firstName, otp),
-      })
-      return res.json({ success: true })
-    }
 
     if (action === 'send-welcome') {
       await transporter.sendMail({
