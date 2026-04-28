@@ -980,7 +980,15 @@ async function loadApp() {
   document.getElementById('settings-name').value = name
   document.getElementById('settings-email').value = currentUser.email || ''
   document.getElementById('settings-plan-display').textContent = (userProfile.plan || 'free').toUpperCase()
-  updateXPDisplay(); loadDecks(); updatePlanChip(); updateAIQuotaDisplay(); appNav('decks')
+  updateXPDisplay(); loadDecks(); updatePlanChip(); updateAIQuotaDisplay()
+  // If user was redirected here after clicking a plan, open payment immediately
+  if (pendingPlan) {
+    const p = pendingPlan
+    pendingPlan = null
+    setTimeout(() => openPayment(p), 400)
+  } else {
+    appNav('decks')
+  }
   setTimeout(checkShoutouts, 1500)
 }
 
@@ -1097,6 +1105,24 @@ async function handleCreateDeck() {
   if (!name) { toast('Please enter a deck name', 'error'); return }
   if (!content && !pdfFile) { toast('Please enter notes, a topic, or upload a PDF', 'error'); return }
 
+  // ── Enforce deck limits per plan ─────────────────────────────────────────
+  const plan = userProfile.plan || 'free'
+  const DECK_LIMITS  = { free: 2, student: 10, pro: 9999, elite: 9999 }
+  const CARD_LIMITS  = { free: 30, student: 80, pro: 9999, elite: 9999 }
+  const maxDecks = DECK_LIMITS[plan] || 2
+  const maxCards = CARD_LIMITS[plan] || 30
+  if (maxDecks < 9999 && currentDecks.length >= maxDecks) {
+    toast(`Deck limit reached (${maxDecks} decks on ${plan.toUpperCase()} plan). Upgrade to create more!`, 'error')
+    setTimeout(() => appNav('upgrade'), 1200)
+    return
+  }
+  // Cap requested card count to plan limit
+  const requestedCount = parseInt(count)
+  const cappedCount    = maxCards < 9999 ? Math.min(requestedCount, maxCards) : requestedCount
+  if (cappedCount < requestedCount) {
+    toast(`Card count capped at ${maxCards} for ${plan.toUpperCase()} plan.`, 'info')
+  }
+
   const btn = document.getElementById('create-btn')
   btn.disabled = true; btn.textContent = '🧠 Generating...'
 
@@ -1108,7 +1134,7 @@ async function handleCreateDeck() {
 
   try {
     // ← AI call goes to Railway backend (Gemini key stays server-side)
-    const data = await aiCall('generate-cards', { text: textInput || 'Topic: ' + name, count: parseInt(count) })
+    const data = await aiCall('generate-cards', { text: textInput || 'Topic: ' + name, count: cappedCount })
     const deck = { id: Date.now().toString(), name, emoji: pickEmoji(name), cards: data.cards, created: new Date().toISOString() }
     currentDecks.unshift(deck); saveDecks(); renderDecks(); addXP(10)
     toast(`Created "${name}" with ${data.cards.length} cards! +10 XP 🎉`, 'success')
@@ -1421,7 +1447,7 @@ async function loadStudyGuide() {
 }
 
 // ─── PAYMENT — PAYPAL (fully server-side via Railway backend) ──────────────
-const PLAN_LIMITS = { free: 5, student: 20, pro: 50, elite: 50 }
+const PLAN_LIMITS = { free: 10, student: 30, pro: 9999, elite: 9999 }
 
 const PLANS = {
   student: { name:'Student Plan', desc:'Perfect for regular study sessions', label:'Student', amountDisplay:'₱110/month' },
@@ -1559,16 +1585,17 @@ function updatePlanChip() {
 
 
 function updateAIQuotaDisplay() {
-  const plan = userProfile.plan || 'free'
-  const limit = PLAN_LIMITS[plan] || 5
-  const used  = getAIUsedToday()
-  const pct   = Math.min(100, Math.round(used / limit * 100))
+  const plan    = userProfile.plan || 'free'
+  const limit   = PLAN_LIMITS[plan] || 10
+  const used    = getAIUsedToday()
+  const unlimited = limit >= 9999
+  const pct     = unlimited ? (Math.min(100, Math.round(used / 50 * 100))) : Math.min(100, Math.round(used / limit * 100))
   const usedEl  = document.getElementById('sidebar-ai-used')
   const limitEl = document.getElementById('sidebar-ai-limit')
   const barEl   = document.getElementById('sidebar-ai-bar')
   if (usedEl)  usedEl.textContent  = used
-  if (limitEl) limitEl.textContent = limit
-  if (barEl) barEl.style.width = pct + '%'
+  if (limitEl) limitEl.textContent = unlimited ? '∞' : limit
+  if (barEl)   barEl.style.width   = unlimited ? '0%' : pct + '%'
 }
 function getAIUsedToday() {
   if (!currentUser) return 0

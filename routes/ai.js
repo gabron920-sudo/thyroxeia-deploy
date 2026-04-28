@@ -28,7 +28,9 @@ const sb = (process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_KEY)
   : null
 
 // ── Daily AI call limits per plan ─────────────────────────────────────────────
-const PLAN_LIMITS = { free: 5, student: 20, pro: 50, elite: 50 }
+// Limits match what's shown on the pricing page exactly
+// 9999 = "Unlimited" for pro/elite — quota check is skipped for these
+const PLAN_LIMITS = { free: 10, student: 30, pro: 9999, elite: 9999 }
 
 // ── POST /ai ──────────────────────────────────────────────────────────────────
 router.post('/', async (req, res) => {
@@ -63,7 +65,8 @@ router.post('/', async (req, res) => {
       .gte('created_at', `${today}T00:00:00.000Z`)
     usedToday = count || 0
 
-    if (usedToday >= dailyLimit) {
+    // Skip quota check for unlimited plans
+    if (dailyLimit < 9999 && usedToday >= dailyLimit) {
       return res.status(429).json({
         error: `Daily limit reached (${dailyLimit} calls/day on ${userPlan} plan). Upgrade to get more AI calls.`,
         limit: dailyLimit,
