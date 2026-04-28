@@ -1,33 +1,10 @@
-/**
- * Thyroxeia AI — Backend Server
- * Handles: AI proxy (Gemini), PayPal payments, branded auth emails
- * Also serves the frontend HTML from /public
- */
+/CORS: requests without origin are not allowed
+  
 
-import 'dotenv/config'
-import express       from 'express'
-import cors          from 'cors'
-import helmet        from 'helmet'
-import rateLimit     from 'express-rate-limit'
-import { fileURLToPath } from 'url'
-import { dirname, join } from 'path'
-import { createClient } from '@supabase/supabase-js'
-
-import aiRouter      from './routes/ai.js'
-import paymentRouter from './routes/payment.js'
-import authRouter    from './routes/auth-email.js'
-
-const app  = express()
-const PORT = process.env.PORT || 3001
-const __dirname = dirname(fileURLToPath(import.meta.url))
-
-// ── Supabase admin client ─────────────────────────────────────────────────────
-const sb = (process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_KEY)
-  ? createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY)
-  : null
-
-// ── Security Headers (Helmet) ─────────────────────────────────────────────────
-app.use(helmet({
+  
+64
+  
+    // Allow same-origin requests (no Origin header) — covers:\n    //   • Frontend fetching its own backend (served on same Railway domain)\n    //   • Railway health checks (/health)\n    //   • Server-to-server calls\n    if (!origin) return cb(null, true)app.use(helmet({
   contentSecurityPolicy: {
     directives: {
       defaultSrc:     ["'self'"],
