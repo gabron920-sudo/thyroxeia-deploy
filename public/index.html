@@ -793,11 +793,19 @@ async function handleLogin(e) {
   e.preventDefault()
   const btn = document.getElementById('login-btn')
   btn.disabled = true; btn.textContent = 'Logging in...'
-  const { error } = await sb.auth.signInWithPassword({
+  const { data: loginData, error } = await sb.auth.signInWithPassword({
     email: document.getElementById('login-email').value,
     password: document.getElementById('login-password').value
   })
-  if (error) { toast(error.message, 'error'); btn.disabled = false; btn.textContent = '🚀 Log In' }
+  if (error) {
+    toast(error.message, 'error')
+    btn.disabled = false; btn.textContent = '🚀 Log In'
+  } else if (loginData?.session) {
+    // Belt-and-suspenders: explicitly navigate in case onAuthStateChange is slow
+    currentUser = loginData.session.user
+    await loadProfile()
+    showPage('app')
+  }
 }
 
 // FORGOT PASSWORD — Supabase sends reset email automatically
@@ -933,9 +941,11 @@ async function loadProfile() {
     } catch(e) {}
   }
 
-  // 2. Fetch verified plan from Supabase (works across devices/browsers)
+  // 2. Fetch verified plan from Supabase — with 5s timeout so it never hangs
   try {
-    const { data, error } = await sb.from('profiles').select('plan').eq('id', currentUser.id).single()
+    const profilePromise = sb.from('profiles').select('plan').eq('id', currentUser.id).maybeSingle()
+    const timeoutPromise = new Promise(resolve => setTimeout(() => resolve({ data: null, error: null }), 5000))
+    const { data, error } = await Promise.race([profilePromise, timeoutPromise])
     if (!error && data?.plan) {
       userProfile.plan = data.plan
       localStorage.setItem(key, JSON.stringify({ ...userProfile, plan_user_id: currentUser.id }))
