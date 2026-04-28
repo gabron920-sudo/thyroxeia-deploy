@@ -749,13 +749,18 @@ function scrollToSection(id) { document.getElementById(id)?.scrollIntoView({ beh
 
 // ─── AUTH STATE ────────────────────────────────────────────────────────────
 sb.auth.onAuthStateChange(async (event, session) => {
-  if (event === 'SIGNED_IN' && session) {
+  // SIGNED_IN = normal login/signup OTP
+  // INITIAL_SESSION = email confirmation link click (Supabase fires this, not SIGNED_IN)
+  if ((event === 'SIGNED_IN' || event === 'INITIAL_SESSION') && session?.user) {
+    if (currentUser?.id === session.user.id && document.getElementById('page-app')?.classList.contains('active')) return
     currentUser = session.user
     await loadProfile()
     showPage('app')
   } else if (event === 'SIGNED_OUT') {
     currentUser = null
     showPage('landing')
+  } else if (event === 'INITIAL_SESSION' && !session) {
+    if (!currentUser) showPage('landing')
   }
 })
 
@@ -876,7 +881,9 @@ async function handleVerify() {
     localStorage.removeItem('verify_email')
     localStorage.removeItem('verify_first_name')
     toast('Email verified! Welcome to Thyroxeia AI 🎉', 'success')
-    // Send welcome email — use session from verifyOtp result (avoids timing issue with currentUser)
+    // Set currentUser immediately from verifyOtp result — don’t wait for onAuthStateChange timing
+    if (verifyData?.session?.user) currentUser = verifyData.session.user
+    // Send welcome email
     try {
       const accessToken = verifyData?.session?.access_token
       if (accessToken) {
@@ -887,6 +894,8 @@ async function handleVerify() {
         })
       }
     } catch(e) { /* non-fatal */ }
+    // Explicitly navigate to app — belt-and-suspenders with onAuthStateChange
+    if (currentUser) { await loadProfile(); showPage('app') }
   }
 }
 
