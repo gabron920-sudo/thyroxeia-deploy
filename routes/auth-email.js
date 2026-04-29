@@ -304,7 +304,8 @@ router.post('/', requireAuth, async (req, res) => {
     const transporter = getTransporter()
     const FROM = process.env.EMAIL_FROM || `Thyroxeia AI <${process.env.SMTP_USER}>`
 
-    if (action === 'send-welcome') {
+    // Alias: send-verification is the same as send-welcome (called on signup)
+    if (action === 'send-verification' || action === 'send-welcome') {
       await transporter.sendMail({
         from: FROM, to: targetEmail,
         subject: "🎉 Welcome to Thyroxeia AI — you're in!",
