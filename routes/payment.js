@@ -19,13 +19,10 @@ const PAYPAL_API           = PAYPAL_MODE === 'sandbox'
   ? 'https://api-m.sandbox.paypal.com'
   : 'https://api-m.paypal.com'
 
-// Prices in PHP — converted from USD at ~₱57/USD (BSP April 2026)
-// Free: $25 | Student: $60 | Pro: $150 | Elite: $300
 const PLAN_PRICES = {
-  free:    { amount: '1425.00', currency: 'PHP', label: 'Thyroxeia AI — Free Plan (Monthly)'    },
-  student: { amount: '3420.00', currency: 'PHP', label: 'Thyroxeia AI — Student Plan (Monthly)' },
-  pro:     { amount: '8550.00', currency: 'PHP', label: 'Thyroxeia AI — Pro Plan (Monthly)'     },
-  elite:   { amount: '17100.00', currency: 'PHP', label: 'Thyroxeia AI — Elite Plan (Monthly)'  },
+  student: { amount: '110.00',  currency: 'PHP', label: 'Thyroxeia AI — Student Plan (Monthly)' },
+  pro:     { amount: '220.00',  currency: 'PHP', label: 'Thyroxeia AI — Pro Plan (Monthly)'     },
+  elite:   { amount: '280.00',  currency: 'PHP', label: 'Thyroxeia AI — Elite Plan (Monthly)'   },
 }
 
 const sb = (process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_KEY)

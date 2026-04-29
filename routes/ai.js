@@ -30,7 +30,7 @@ const sb = (process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_KEY)
 // ── Daily AI call limits per plan ─────────────────────────────────────────────
 // Limits match what's shown on the pricing page exactly
 // 9999 = "Unlimited" for pro/elite — quota check is skipped for these
-const PLAN_LIMITS = { free: 10, student: 30, pro: 9999, elite: 9999 }
+const PLAN_LIMITS = { free: 25, student: 60, pro: 150, elite: 300 }
 
 // ── POST /ai ──────────────────────────────────────────────────────────────────
 router.post('/', async (req, res) => {

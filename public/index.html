@@ -202,7 +202,7 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',system-ui,sans-s
       <h1>Study Smarter with<br><span class="grad-text">AI That Actually Works</span></h1>
       <p class="hero-sub">Thyroxeia AI turns your notes, PDFs, and topics into flashcards, quizzes, and a real AI tutor — powered by advanced Gemini AI.</p>
       <div class="hero-btns">
-        <button class="btn btn-primary btn-lg" onclick="showAuth('signup')">🚀 Start Free Trial</button>
+        <button class="btn btn-primary btn-lg" onclick="showAuth('signup')">🚀 Start Now — It's Free</button>
         <button class="btn btn-outline btn-lg" onclick="scrollToSection('pricing')">View Pricing</button>
       </div>
       <div class="stat-chips">
@@ -275,32 +275,32 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',system-ui,sans-s
       <div class="text-center mb-4">
         <div class="section-label">Pricing</div>
         <h2 class="section-title">Choose Your Plan</h2>
-        <p class="section-sub" style="margin:0 auto">All plans billed monthly.</p>
+        <p class="section-sub" style="margin:0 auto">Start free. Upgrade when you need more power.</p>
       </div>
       <div class="pricing-grid">
         <div class="pricing-card">
           <div class="plan-chip plan-free mb-4">FREE</div>
           <h3 class="font-bold text-lg">Free</h3>
           <p class="text-sm opacity-70 mt-1">Get started with AI study tools</p>
-          <div class="price-amount">₱1,425</div><div class="price-per">/month</div>
+          <div class="price-amount">₱0</div><div class="price-per">forever</div>
           <ul class="feature-list">
             <li class="yes"><span class="check-yes">✓</span> 2 decks, 30 cards each</li>
             <li class="yes"><span class="check-yes">✓</span> Basic flashcard study</li>
-            <li class="yes"><span class="check-yes">✓</span> 10 AI calls/day</li>
+            <li class="yes"><span class="check-yes">✓</span> 25 AI calls/day</li>
             <li class="no"><span class="check-no">✗</span> Quiz & Timed modes</li>
             <li class="no"><span class="check-no">✗</span> AI Tutor Chat</li>
           </ul>
-          <button class="btn btn-outline w-full" onclick="handlePlanClick('free')">Get Free Plan</button>
+          <button class="btn btn-outline w-full" onclick="showAuth('signup')">Get Started Free</button>
         </div>
         <div class="pricing-card">
           <div class="plan-chip plan-student mb-4">STUDENT</div>
           <h3 class="font-bold text-lg">Student</h3>
           <p class="text-sm opacity-70 mt-1">Perfect for regular study sessions</p>
-          <div class="price-amount">₱3,420</div><div class="price-per">/month</div>
+          <div class="price-amount">₱110</div><div class="price-per">/month</div>
           <ul class="feature-list">
             <li class="yes"><span class="check-yes">✓</span> 10 decks, 80 cards each</li>
             <li class="yes"><span class="check-yes">✓</span> All study modes</li>
-            <li class="yes"><span class="check-yes">✓</span> 30 AI calls/day</li>
+            <li class="yes"><span class="check-yes">✓</span> 60 AI calls/day</li>
             <li class="yes"><span class="check-yes">✓</span> AI Tutor Chat</li>
             <li class="no"><span class="check-no">✗</span> Cram Mode</li>
           </ul>
@@ -311,11 +311,11 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',system-ui,sans-s
           <div class="plan-chip plan-pro mb-4">PRO</div>
           <h3 class="font-bold text-lg">Pro</h3>
           <p class="text-sm opacity-70 mt-1">Unlimited everything + all modes</p>
-          <div class="price-amount">₱8,550</div><div class="price-per">/month</div>
+          <div class="price-amount">₱220</div><div class="price-per">/month</div>
           <ul class="feature-list">
             <li class="yes"><span class="check-yes">✓</span> Unlimited decks & cards</li>
             <li class="yes"><span class="check-yes">✓</span> All study modes</li>
-            <li class="yes"><span class="check-yes">✓</span> Unlimited AI calls</li>
+            <li class="yes"><span class="check-yes">✓</span> 300 AI calls/day</li>
             <li class="yes"><span class="check-yes">✓</span> AI Tutor Chat</li>
             <li class="yes"><span class="check-yes">✓</span> Priority AI speed</li>
           </ul>
@@ -325,7 +325,7 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',system-ui,sans-s
           <div class="plan-chip plan-elite mb-4">🔥 ELITE</div>
           <h3 class="font-bold text-lg">Elite</h3>
           <p class="text-sm opacity-70 mt-1">Pro + Cram Mode + Exam Predictions</p>
-          <div class="price-amount">₱17,100</div><div class="price-per">/month</div>
+          <div class="price-amount">₱280</div><div class="price-per">/month</div>
           <ul class="feature-list">
             <li class="yes"><span class="check-yes">✓</span> Everything in Pro</li>
             <li class="yes"><span class="check-yes">✓</span> Cram Mode</li>
@@ -435,7 +435,7 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',system-ui,sans-s
       <div class="flex justify-between items-center mb-2"><span class="text-sm">Plan</span><span class="font-semibold" id="payment-plan-label">Pro</span></div>
       <div class="flex justify-between items-center mb-2"><span class="text-sm">Billing</span><span class="font-semibold">Monthly</span></div>
       <div style="border-top:1px solid var(--border);margin:12px 0"></div>
-      <div class="flex justify-between items-center"><span class="font-semibold">Total</span><span class="font-bold text-lg grad-text" id="payment-amount">₱8,550/month</span></div>
+      <div class="flex justify-between items-center"><span class="font-semibold">Total</span><span class="font-bold text-lg grad-text" id="payment-amount">₱220/month</span></div>
     </div>
     <!-- PayPal buttons rendered by JS — order creation & capture go via Railway backend -->
     <div id="paypal-button-container" style="min-height:50px"></div>
@@ -629,9 +629,9 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',system-ui,sans-s
       <h1 class="font-bold text-2xl mb-2">⚡ Upgrade Your Plan</h1>
       <p class="text-sm mb-8" style="color:var(--text2)">Unlock more decks, unlimited AI, and all study modes.</p>
       <div class="pricing-grid">
-        <div class="pricing-card"><div class="plan-chip plan-student mb-4">STUDENT</div><h3 class="font-bold text-lg">Student</h3><div class="price-amount">₱3,420</div><div class="price-per">/month</div><ul class="feature-list"><li class="yes"><span class="check-yes">✓</span> 10 decks, 80 cards each</li><li class="yes"><span class="check-yes">✓</span> All study modes</li><li class="yes"><span class="check-yes">✓</span> 30 AI calls/day</li><li class="yes"><span class="check-yes">✓</span> AI Tutor Chat</li></ul><button class="btn btn-outline w-full" onclick="openPayment('student')">📖 Upgrade to Student</button></div>
-        <div class="pricing-card popular"><div class="popular-badge">⭐ MOST POPULAR</div><div class="plan-chip plan-pro mb-4">PRO</div><h3 class="font-bold text-lg">Pro</h3><div class="price-amount">₱8,550</div><div class="price-per">/month</div><ul class="feature-list"><li class="yes"><span class="check-yes">✓</span> Unlimited decks & cards</li><li class="yes"><span class="check-yes">✓</span> All study modes</li><li class="yes"><span class="check-yes">✓</span> Unlimited AI calls</li><li class="yes"><span class="check-yes">✓</span> AI Tutor Chat</li><li class="yes"><span class="check-yes">✓</span> Priority AI speed</li></ul><button class="btn btn-primary w-full" onclick="openPayment('pro')">⚡ Upgrade to Pro</button></div>
-        <div class="pricing-card"><div class="plan-chip plan-elite mb-4">🔥 ELITE</div><h3 class="font-bold text-lg">Elite</h3><div class="price-amount">₱17,100</div><div class="price-per">/month</div><ul class="feature-list"><li class="yes"><span class="check-yes">✓</span> Everything in Pro</li><li class="yes"><span class="check-yes">✓</span> Cram Mode</li><li class="yes"><span class="check-yes">✓</span> Exam Predictions</li><li class="yes"><span class="check-yes">✓</span> Advanced Analytics</li></ul><button class="btn btn-outline w-full" onclick="openPayment('elite')" style="border-color:var(--yellow);color:var(--yellow)">🔥 Upgrade to Elite</button></div>
+        <div class="pricing-card"><div class="plan-chip plan-student mb-4">STUDENT</div><h3 class="font-bold text-lg">Student</h3><div class="price-amount">₱110</div><div class="price-per">/month</div><ul class="feature-list"><li class="yes"><span class="check-yes">✓</span> 10 decks, 80 cards each</li><li class="yes"><span class="check-yes">✓</span> All study modes</li><li class="yes"><span class="check-yes">✓</span> 60 AI calls/day</li><li class="yes"><span class="check-yes">✓</span> AI Tutor Chat</li></ul><button class="btn btn-outline w-full" onclick="openPayment('student')">📖 Upgrade to Student</button></div>
+        <div class="pricing-card popular"><div class="popular-badge">⭐ MOST POPULAR</div><div class="plan-chip plan-pro mb-4">PRO</div><h3 class="font-bold text-lg">Pro</h3><div class="price-amount">₱220</div><div class="price-per">/month</div><ul class="feature-list"><li class="yes"><span class="check-yes">✓</span> Unlimited decks & cards</li><li class="yes"><span class="check-yes">✓</span> All study modes</li><li class="yes"><span class="check-yes">✓</span> 150 AI calls/day</li><li class="yes"><span class="check-yes">✓</span> AI Tutor Chat</li><li class="yes"><span class="check-yes">✓</span> Priority AI speed</li></ul><button class="btn btn-primary w-full" onclick="openPayment('pro')">⚡ Upgrade to Pro</button></div>
+        <div class="pricing-card"><div class="plan-chip plan-elite mb-4">🔥 ELITE</div><h3 class="font-bold text-lg">Elite</h3><div class="price-amount">₱280</div><div class="price-per">/month</div><ul class="feature-list"><li class="yes"><span class="check-yes">✓</span> Everything in Pro</li><li class="yes"><span class="check-yes">✓</span> Cram Mode</li><li class="yes"><span class="check-yes">✓</span> Exam Predictions</li><li class="yes"><span class="check-yes">✓</span> Advanced Analytics</li></ul><button class="btn btn-outline w-full" onclick="openPayment('elite')" style="border-color:var(--yellow);color:var(--yellow)">🔥 Upgrade to Elite</button></div>
       </div>
     </div>
     <!-- SETTINGS -->
@@ -1447,13 +1447,13 @@ async function loadStudyGuide() {
 }
 
 // ─── PAYMENT — PAYPAL (fully server-side via Railway backend) ──────────────
-const PLAN_LIMITS = { free: 10, student: 30, pro: 9999, elite: 9999 }
+const PLAN_LIMITS = { free: 25, student: 60, pro: 150, elite: 300 }
 
 const PLANS = {
-  free:    { name:'Free Plan',    desc:'Get started with basic features', label:'Free', amountDisplay:'₱1,425/month' },
-  student: { name:'Student Plan', desc:'Perfect for regular study sessions', label:'Student', amountDisplay:'₱3,420/month' },
-  pro:     { name:'Pro Plan',     desc:'Unlimited everything + all study modes', label:'Pro', amountDisplay:'₱8,550/month' },
-  elite:   { name:'Elite Plan',   desc:'Pro + gold username + shoutout + priority support', label:'Elite', amountDisplay:'₱17,100/month' }
+  free:    { name:'Free Plan',    desc:'Get started with basic features', label:'Free', amountDisplay:'₱0/month' },
+  student: { name:'Student Plan', desc:'Perfect for regular study sessions', label:'Student', amountDisplay:'₱110/month' },
+  pro:     { name:'Pro Plan',     desc:'Unlimited everything + all study modes', label:'Pro', amountDisplay:'₱220/month' },
+  elite:   { name:'Elite Plan',   desc:'Pro + gold username + shoutout + priority support', label:'Elite', amountDisplay:'₱280/month' }
 }
 let _payCapturing = false, _payCompleted = false, _payAttempts = 0
 
