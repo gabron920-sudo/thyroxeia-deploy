@@ -657,11 +657,11 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',system-ui,sans-s
 <!-- ============================================================ JAVASCRIPT -->
 <script>
 // ─── BACKEND ENDPOINTS ────────────────────────────────────────────────────
-// ⚠️  Replace YOUR_RAILWAY_URL with your deployed Railway backend URL
+const _CF_BASE = 'https://thyroxeia-ai.fancy-sky-31cf.workers.dev'
 const BACKEND = {
-  AI:         '/ai',
-  PAYMENT:    '/payment',
-  AUTH_EMAIL: '/auth',
+  AI:         _CF_BASE + '/ai',
+  PAYMENT:    _CF_BASE + '/payment',
+  AUTH_EMAIL: _CF_BASE + '/auth',
 }
 // All AI calls go through the secure backend — no direct browser→Gemini calls
 const _BACKEND_READY = true
