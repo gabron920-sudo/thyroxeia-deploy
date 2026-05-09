@@ -1,3 +1,4 @@
+
 /**
  * /auth  — Branded emails + Elite shoutout handler
  *
@@ -10,52 +11,38 @@
  *   elite-shoutout     → insert shoutout row (requires valid JWT, userId from token)
  *
  * SECURITY FIXES:
- *  - OTP is now generated server-side with crypto.randomInt (not passed from client)
+ *  - OTP is now generated SERVER-SIDE with Web Crypto (not passed from client)
  *  - OTP stored in Supabase otp_codes table with 10-min expiry
  *  - All email actions require valid JWT
  *  - HTML entity escaping on all user inputs
  */
 
-import { Router }     from 'express'
-import nodemailer     from 'nodemailer'
+import { Hono } from 'hono'
 import { createClient } from '@supabase/supabase-js'
-import { randomInt, createHash } from 'crypto'
 
-// ── OTP attempt tracking (in-memory, per user_id) ─────────────────────────────
-const otpAttempts = new Map() // user_id → { count, resetAt }
+// ── OTP attempt tracking (KV-backed per user_id via c.env.OTP_ATTEMPTS) ───────
 const OTP_MAX_ATTEMPTS = 5
-function checkOtpAttempts(userId) {
+
+async function checkOtpAttempts(env, userId) {
+  const key = `otp_attempts:${userId}`
+  const raw = await env.OTP_ATTEMPTS.get(key)
   const now = Date.now()
-  const entry = otpAttempts.get(userId)
+  const entry = raw ? JSON.parse(raw) : null
   if (!entry || entry.resetAt < now) {
-    otpAttempts.set(userId, { count: 1, resetAt: now + 15 * 60 * 1000 })
+    await env.OTP_ATTEMPTS.put(key, JSON.stringify({ count: 1, resetAt: now + 15 * 60 * 1000 }), { expirationTtl: 900 })
     return true
   }
   if (entry.count >= OTP_MAX_ATTEMPTS) return false
   entry.count++
+  await env.OTP_ATTEMPTS.put(key, JSON.stringify(entry), { expirationTtl: 900 })
   return true
 }
-function clearOtpAttempts(userId) { otpAttempts.delete(userId) }
 
-const router = Router()
-
-const sb = (process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_KEY)
-  ? createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY)
-  : null
-
-// ── JWT Auth Middleware ───────────────────────────────────────────────────────
-async function requireAuth(req, res, next) {
-  const authHeader = req.headers.authorization || ''
-  const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null
-  if (!token) return res.status(401).json({ error: 'Authentication required.' })
-  if (!sb) return res.status(500).json({ error: 'Auth service not configured.' })
-
-  const { data: { user }, error } = await sb.auth.getUser(token)
-  if (error || !user) return res.status(401).json({ error: 'Invalid or expired session. Please log in again.' })
-
-  req.user = user
-  next()
+async function clearOtpAttempts(env, userId) {
+  await env.OTP_ATTEMPTS.delete(`otp_attempts:${userId}`)
 }
+
+const app = new Hono()
 
 // ── HTML entity escape ────────────────────────────────────────────────────────
 function escapeHtml(str) {
@@ -69,19 +56,18 @@ function escapeHtml(str) {
     .replace(/\//g, '&#x2F;')
 }
 
-let _transporter = null
-function getTransporter() {
-  if (_transporter) return _transporter
-  if (!process.env.SMTP_HOST || !process.env.SMTP_USER || !process.env.SMTP_PASS) {
-    throw new Error('SMTP not configured')
-  }
-  _transporter = nodemailer.createTransport({
-    host: process.env.SMTP_HOST,
-    port: parseInt(process.env.SMTP_PORT || '587'),
-    secure: process.env.SMTP_PORT === '465',
-    auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
+// ── Resend email sender ───────────────────────────────────────────────────────
+async function sendEmail(env, to, subject, html) {
+  const res = await fetch('https://api.resend.com/emails', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${env.RESEND_API_KEY}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ from: env.EMAIL_FROM, to: [to], subject, html })
   })
-  return _transporter
+  if (!res.ok) throw new Error(`Resend error ${res.status}: ${await res.text()}`)
+  return res.json()
 }
 
 // ── Email templates ───────────────────────────────────────────────────────────
@@ -169,166 +155,162 @@ function eliteWelcomeTemplate(firstName) {
 </body></html>`
 }
 
+// ── Auth helper ───────────────────────────────────────────────────────────────
+async function getAuthUser(c) {
+  const authHeader = c.req.header('Authorization') || ''
+  const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null
+  if (!token) return { error: 'Authentication required.', status: 401 }
+  const sb = createClient(c.env.SUPABASE_URL, c.env.SUPABASE_SERVICE_KEY)
+  const { data: { user }, error } = await sb.auth.getUser(token)
+  if (error || !user) return { error: 'Invalid or expired session. Please log in again.', status: 401 }
+  return { user, sb }
+}
+
 // ── POST /auth/send-otp ───────────────────────────────────────────────────────
-// FIX: OTP is now generated SERVER-SIDE. Client never sees or sends the OTP value.
-// Requires JWT auth — OTP is emailed to the authenticated user's own email.
-router.post('/send-otp', requireAuth, async (req, res) => {
-  if (!sb) return res.status(500).json({ error: 'Supabase not configured.' })
-  const { firstName } = req.body || {}
-  const email = req.user.email
-  if (!email) return res.status(400).json({ error: 'No email associated with this account.' })
+app.post('/send-otp', async (c) => {
+  if (!c.env.SUPABASE_URL || !c.env.SUPABASE_SERVICE_KEY) return c.json({ error: 'Supabase not configured.' }, 500)
+  const { user, sb, error, status } = await getAuthUser(c)
+  if (error) return c.json({ error }, status)
+
+  const { firstName } = await c.req.json()
+  const email = user.email
+  if (!email) return c.json({ error: 'No email associated with this account.' }, 400)
 
   try {
-    // Generate cryptographically random 6-digit OTP
-    const otp = String(randomInt(100000, 999999))
-    const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString() // 10 minutes
+    // Generate cryptographically random 6-digit OTP via Web Crypto
+    const arr = new Uint32Array(1)
+    crypto.getRandomValues(arr)
+    const otp = String(100000 + (arr[0] % 900000))
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString()
 
     // Hash OTP before storing — plain value never touches the DB
-    const otpHash = createHash('sha256').update(otp).digest('hex')
+    const hashBuf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(otp))
+    const otpHash = Array.from(new Uint8Array(hashBuf)).map(b => b.toString(16).padStart(2, '0')).join('')
 
     // Store OTP in Supabase (upsert — one OTP per user at a time)
     const { error: upsertErr } = await sb.from('otp_codes').upsert({
-      user_id:    req.user.id,
+      user_id:    user.id,
       email:      email,
       otp_hash:   otpHash,
       expires_at: expiresAt,
       used:       false,
     }, { onConflict: 'user_id' })
-
     if (upsertErr) throw new Error(upsertErr.message)
 
-    // Send branded email
-    const transporter = getTransporter()
-    const FROM = process.env.EMAIL_FROM || `Thyroxeia AI <${process.env.SMTP_USER}>`
-    await transporter.sendMail({
-      from: FROM, to: email,
-      subject: '⚡ Your Thyroxeia AI verification code',
-      html: verificationTemplate(firstName || '', otp),
-    })
+    await sendEmail(c.env, email, '⚡ Your Thyroxeia AI verification code', verificationTemplate(firstName || '', otp))
 
     console.log(`[OTP] Sent to ${email}, expires ${expiresAt}`)
-    return res.json({ success: true })
+    return c.json({ success: true })
   } catch (err) {
     console.error('[OTP send error]', err.message)
-    return res.status(500).json({ error: 'Failed to send verification code.' })
+    return c.json({ error: 'Failed to send verification code.' }, 500)
   }
 })
 
 // ── POST /auth/verify-otp ─────────────────────────────────────────────────────
-// FIX: Verifies OTP server-side — no client-side bypass possible
-router.post('/verify-otp', requireAuth, async (req, res) => {
-  if (!sb) return res.status(500).json({ error: 'Supabase not configured.' })
-  const { otp } = req.body || {}
-  if (!otp || !/^\d{6}$/.test(otp)) return res.status(400).json({ error: 'Invalid OTP format.' })
+app.post('/verify-otp', async (c) => {
+  if (!c.env.SUPABASE_URL || !c.env.SUPABASE_SERVICE_KEY) return c.json({ error: 'Supabase not configured.' }, 500)
+  const { user, sb, error, status } = await getAuthUser(c)
+  if (error) return c.json({ error }, status)
+
+  const { otp } = await c.req.json()
+  if (!otp || !/^\d{6}$/.test(otp)) return c.json({ error: 'Invalid OTP format.' }, 400)
 
   try {
-    const { data, error } = await sb
+    const { data, error: dbErr } = await sb
       .from('otp_codes')
       .select('*')
-      .eq('user_id', req.user.id)
+      .eq('user_id', user.id)
       .eq('used', false)
       .single()
 
-    if (error || !data) return res.status(400).json({ error: 'No pending verification found.' })
+    if (dbErr || !data) return c.json({ error: 'No pending verification found.' }, 400)
 
-    // Check expiry
     if (new Date(data.expires_at) < new Date()) {
-      return res.status(400).json({ error: 'Verification code has expired. Please request a new one.' })
+      return c.json({ error: 'Verification code has expired. Please request a new one.' }, 400)
     }
 
-    // Rate-limit OTP attempts
-    if (!checkOtpAttempts(req.user.id)) {
-      return res.status(429).json({ error: 'Too many attempts. Please request a new code.' })
+    if (!await checkOtpAttempts(c.env, user.id)) {
+      return c.json({ error: 'Too many attempts. Please request a new code.' }, 429)
     }
 
-    // Check OTP value (compare against stored hash)
-    const inputHash = createHash('sha256').update(otp).digest('hex')
+    const hashBuf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(otp))
+    const inputHash = Array.from(new Uint8Array(hashBuf)).map(b => b.toString(16).padStart(2, '0')).join('')
+
     if (data.otp_hash !== inputHash) {
-      return res.status(400).json({ error: 'Incorrect verification code.' })
+      return c.json({ error: 'Incorrect verification code.' }, 400)
     }
 
-    // Mark as used & clear attempt counter
-    await sb.from('otp_codes').update({ used: true }).eq('user_id', req.user.id)
-    clearOtpAttempts(req.user.id)
+    await sb.from('otp_codes').update({ used: true }).eq('user_id', user.id)
+    await clearOtpAttempts(c.env, user.id)
 
-    console.log(`[OTP] ✅ Verified for user ${req.user.id}`)
-    return res.json({ success: true })
+    console.log(`[OTP] ✅ Verified for user ${user.id}`)
+    return c.json({ success: true })
   } catch (err) {
     console.error('[OTP verify error]', err.message)
-    return res.status(500).json({ error: 'Verification failed. Please try again.' })
+    return c.json({ error: 'Verification failed. Please try again.' }, 500)
   }
 })
 
 // ── POST /auth — JWT-protected email actions ──────────────────────────────────
-router.post('/', requireAuth, async (req, res) => {
-  const { action, payload } = req.body || {}
-  if (!action || !payload) return res.status(400).json({ error: 'Missing action or payload' })
+app.post('/', async (c) => {
+  const { user, sb, error, status } = await getAuthUser(c)
+  if (error) return c.json({ error }, status)
 
-  const authenticatedUserId = req.user.id
+  const { action, payload } = await c.req.json()
+  if (!action || !payload) return c.json({ error: 'Missing action or payload' }, 400)
+
+  const authenticatedUserId = user.id
 
   // ── Elite shoutout ──────────────────────────────────────────────────────────
   if (action === 'elite-shoutout') {
     const { displayName } = payload
-    if (!displayName) return res.status(400).json({ error: 'Missing displayName' })
-    if (!sb) return res.status(500).json({ error: 'Supabase not configured' })
+    if (!displayName) return c.json({ error: 'Missing displayName' }, 400)
+    if (!c.env.SUPABASE_URL) return c.json({ error: 'Supabase not configured' }, 500)
 
     const safeDisplayName = escapeHtml(String(displayName).slice(0, 100))
 
     try {
       const { data: existing } = await sb.from('shoutouts').select('id').eq('user_id', authenticatedUserId).single()
-      if (existing) {
-        return res.json({ success: true, skipped: true })
-      }
+      if (existing) return c.json({ success: true, skipped: true })
 
-      const { error } = await sb.from('shoutouts').insert({
+      const { error: insErr } = await sb.from('shoutouts').insert({
         user_id:      authenticatedUserId,
         display_name: safeDisplayName,
         created_at:   new Date().toISOString(),
       })
-      if (error) throw new Error(error.message)
+      if (insErr) throw new Error(insErr.message)
 
-      return res.json({ success: true })
+      return c.json({ success: true })
     } catch (err) {
       console.error('[Shoutout error]', err.message)
-      return res.status(500).json({ error: 'Failed to create shoutout.' })
+      return c.json({ error: 'Failed to create shoutout.' }, 500)
     }
   }
 
   // ── Email actions ───────────────────────────────────────────────────────────
   const { firstName } = payload
-  const targetEmail = req.user.email  // always from JWT
-  if (!targetEmail) return res.status(400).json({ error: 'No email associated with this account' })
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(targetEmail)) return res.status(400).json({ error: 'Invalid email' })
+  const targetEmail = user.email
+  if (!targetEmail) return c.json({ error: 'No email associated with this account' }, 400)
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(targetEmail)) return c.json({ error: 'Invalid email' }, 400)
 
   try {
-    const transporter = getTransporter()
-    const FROM = process.env.EMAIL_FROM || `Thyroxeia AI <${process.env.SMTP_USER}>`
-
-    // Alias: send-verification is the same as send-welcome (called on signup)
     if (action === 'send-verification' || action === 'send-welcome') {
-      await transporter.sendMail({
-        from: FROM, to: targetEmail,
-        subject: "🎉 Welcome to Thyroxeia AI — you're in!",
-        html: welcomeTemplate(firstName),
-      })
-      return res.json({ success: true })
+      await sendEmail(c.env, targetEmail, "🎉 Welcome to Thyroxeia AI — you're in!", welcomeTemplate(firstName))
+      return c.json({ success: true })
     }
 
     if (action === 'send-elite-welcome') {
-      await transporter.sendMail({
-        from: FROM, to: targetEmail,
-        subject: '👑 You are now Elite — welcome to the top!',
-        html: eliteWelcomeTemplate(firstName),
-      })
-      return res.json({ success: true })
+      await sendEmail(c.env, targetEmail, '👑 You are now Elite — welcome to the top!', eliteWelcomeTemplate(firstName))
+      return c.json({ success: true })
     }
 
-    return res.status(400).json({ error: 'Unknown action: ' + action })
+    return c.json({ error: 'Unknown action: ' + action }, 400)
 
   } catch (err) {
     console.error('[Auth email error]', err.message)
-    res.status(500).json({ error: 'Failed to send email. Please try again.' })
+    return c.json({ error: 'Failed to send email. Please try again.' }, 500)
   }
 })
 
-export default router
+export default app
