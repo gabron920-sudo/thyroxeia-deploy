@@ -73,7 +73,59 @@ app.post('/', async (c) => {
   }
 
   // ── 3. Validate request body ───────────────────────────────────────────────
-  const { prompt, model, history } = await c.req.json()
+  const body = await c.req.json()
+  let { prompt, model, history } = body
+
+  // ── Build prompt from type+payload if frontend sends structured call ────────
+  if (!prompt && body.type && body.payload) {
+    const { type, payload } = body
+    if (type === 'generate-cards') {
+      const count = payload.count || 10
+      prompt = `You are a flashcard generator. Based on the following text or topic, generate exactly ${count} flashcards.
+Return ONLY valid JSON in this exact format, no markdown, no extra text:
+{"cards":[{"q":"question","a":"answer"},...]}
+
+Text/Topic:
+${payload.text}`
+    } else if (type === 'generate-quiz') {
+      const cards = (payload.cards || []).map(c => `Q: ${c.q} | A: ${c.a}`).join('\n')
+      const count = payload.count || 5
+      prompt = `You are a quiz generator. Generate exactly ${count} multiple-choice quiz questions based on these flashcards.
+Return ONLY valid JSON, no markdown:
+{"questions":[{"q":"question","options":["A","B","C","D"],"answer":"correct option text"},...]}
+
+Flashcards:
+${cards}`
+    } else if (type === 'grade-answer') {
+      prompt = `You are a strict but fair teacher grading a student's answer.
+Question: ${payload.question}
+Correct answer: ${payload.correctAnswer}
+Student's answer: ${payload.userAnswer}
+
+Reply ONLY with valid JSON, no markdown:
+{"correct":true or false,"feedback":"brief encouraging feedback in 1-2 sentences"}`
+    } else if (type === 'chat') {
+      prompt = payload.message
+      history = payload.history || []
+    } else if (type === 'study-guide') {
+      const cards = (payload.cards || []).map(c => `- ${c.q}: ${c.a}`).join('\n')
+      prompt = `Create a concise study guide for the topic "${payload.deckName}" based on these flashcards:
+${cards}
+
+Format it with clear sections, key concepts, and memory tips. Keep it under 400 words.`
+    } else if (type === 'timed-quiz') {
+      const cards = (payload.cards || []).map(c => `Q: ${c.q} | A: ${c.a}`).join('\n')
+      prompt = `Generate ${payload.count || 5} timed quiz questions from these flashcards. Each must have 4 options with one correct answer.
+Return ONLY valid JSON:
+{"questions":[{"q":"question","options":["A","B","C","D"],"answer":"correct option text"},...]}
+
+Flashcards:
+${cards}`
+    } else {
+      prompt = payload.text || payload.message || JSON.stringify(payload)
+    }
+  }
+
   if (!prompt) return c.json({ error: 'Missing prompt' }, 400)
 
   try {
@@ -110,7 +162,21 @@ app.post('/', async (c) => {
 
     const remaining = dailyLimit - usedToday - 1
     console.log(`[AI] ✅ ${userPlan} user ${userId} — ${remaining} calls remaining today`)
-    return c.json({ text, remaining, limit: dailyLimit, plan: userPlan })
+
+    // ── 5. Parse structured JSON responses for typed calls ─────────────────
+    const type = body?.type
+    if (type && ['generate-cards','generate-quiz','grade-answer','timed-quiz'].includes(type)) {
+      try {
+        const cleaned = text.replace(/```json\n?/g,'').replace(/```\n?/g,'').trim()
+        const parsed = JSON.parse(cleaned)
+        return c.json({ ...parsed, text, remaining, used: usedToday + 1, limit: dailyLimit, plan: userPlan })
+      } catch(e) {
+        console.error('[AI Parse Error]', e.message, text.slice(0, 200))
+        // Return raw text so frontend can handle gracefully
+      }
+    }
+
+    return c.json({ text, remaining, used: usedToday + 1, limit: dailyLimit, plan: userPlan })
 
   } catch (err) {
     console.error('[AI Exception]', err.message)
