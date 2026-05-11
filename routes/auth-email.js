@@ -140,7 +140,7 @@ function eliteWelcomeTemplate(firstName) {
   <div class="body">
     <p style="font-size:1.05rem;font-weight:600">Congratulations, ${safeName || 'Champion'}! 🏆</p>
     <p style="color:#94a3b8;margin:8px 0 24px">Your Elite plan is now active. Here's what you unlocked:</p>
-    <div class="perk"><span style="font-size:1.3rem">⚡</span><div><strong>Everything in Pro</strong><p style="color:#94a3b8;font-size:.85rem;margin:2px 0 0">50 AI calls/day, unlimited decks, all study modes.</p></div></div>
+    <div class="perk"><span style="font-size:1.3rem">⚡</span><div><strong>Everything in Pro</strong><p style="color:#94a3b8;font-size:.85rem;margin:2px 0 0">300 AI calls/day, unlimited decks, all study modes.</p></div></div>
     <div class="perk"><span style="font-size:1.3rem">🌟</span><div><strong>Gold Username Badge</strong><p style="color:#94a3b8;font-size:.85rem;margin:2px 0 0">Your name appears in gold across the platform.</p></div></div>
     <div class="perk"><span style="font-size:1.3rem">📢</span><div><strong>Server-Wide Shoutout</strong><p style="color:#94a3b8;font-size:.85rem;margin:2px 0 0">Every user sees your welcome announcement when they log in.</p></div></div>
     <div class="perk"><span style="font-size:1.3rem">🎯</span><div><strong>Priority Support</strong><p style="color:#94a3b8;font-size:.85rem;margin:2px 0 0">Your support tickets jump to the front of the queue.</p></div></div>
