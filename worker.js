@@ -20,31 +20,36 @@ app.route('/auth',    authRouter)
 app.route('/payment', paymentRouter)
 
 app.get('/api/paypal-config', (c) =>
-  c.json({ clientId: c.env.PAYPAL_CLIENT_ID, mode: c.env.PAYPAL_MODE ?? 'live' })
+  c.json({
+    clientId: c.env.PAYPAL_CLIENT_ID,
+    mode: c.env.PAYPAL_MODE ?? 'live',
+    currency: 'PHP',
+    intent: 'subscription',
+    vault: true,
+  })
 )
+
 app.get('/health', (c) => c.json({ status: 'ok', ts: Date.now() }))
 
-// Serve index.html for everything else (SPA catch-all)
+// Serve static assets first, then fall back to /index.html for SPA routes.
+// This fixes direct frontend routes like /login, /verify, /dashboard, /checkout.
 app.get('*', async (c) => {
-  // Try to fetch the requested path from Cloudflare Assets
-  const asset = await c.env.ASSETS.fetch(c.req.raw)
-  
-  // If the asset exists (200-299 status), return it
-  if (asset.status >= 200 && asset.status < 300) {
-    return asset
+  try {
+    const asset = await c.env.ASSETS.fetch(c.req.raw)
+
+    if (asset.status >= 200 && asset.status < 300) {
+      return asset
+    }
+  } catch (err) {
+    console.warn('[Assets] direct asset fetch failed:', err?.message || err)
   }
-  
-  // For 404 or any other non-success, serve index.html for SPA routing
-  const indexRequest = new Request(c.req.url.replace(/\?.*$/, '') + '/index.html', c.req)
-  const indexAsset = await c.env.ASSETS.fetch(indexRequest)
-  
-  if (indexAsset.status >= 200 && indexAsset.status < 300) {
-    return indexAsset
-  }
-  
-  // Fallback: fetch index.html from root
-  const rootIndex = await c.env.ASSETS.fetch(new Request(c.req.url.split('/')[0] + '//' + new URL(c.req.url).host + '/index.html', c.req))
-  return rootIndex
+
+  const url = new URL(c.req.url)
+  url.pathname = '/index.html'
+  url.search = ''
+
+  const indexRequest = new Request(url.toString(), c.req.raw)
+  return c.env.ASSETS.fetch(indexRequest)
 })
 
 app.notFound((c) => c.json({ error: 'Not found' }, 404))
