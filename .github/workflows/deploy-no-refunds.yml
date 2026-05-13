@@ -1,0 +1,48 @@
+name: Deploy no-refunds patch to Cloudflare Workers
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - no-refunds-patch
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Apply patched files to active paths
+        run: |
+          set -e
+          if [ -f public/index_cancel_policy_patched.html ]; then
+            cp public/index_cancel_policy_patched.html public/index.html
+          elif [ -f public/index_patched.html ]; then
+            cp public/index_patched.html public/index.html
+          else
+            echo "Missing patched frontend file" >&2
+            exit 1
+          fi
+
+          if [ -f routes/payment_patched.js ]; then
+            cp routes/payment_patched.js routes/payment.js
+          else
+            echo "Missing patched payment route file" >&2
+            exit 1
+          fi
+
+      - name: Verify no-refunds patch markers
+        run: |
+          grep -q "current billing period" public/index.html
+          grep -q "no-refunds-ack" public/index.html
+          grep -q "cancellation only stops future renewals" public/index.html
+          grep -q "noRefundsAcknowledged" routes/payment.js
+
+      - name: Install dependencies
+        run: npm ci || npm install
+
+      - name: Deploy to Cloudflare Workers
+        run: npx wrangler deploy
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
