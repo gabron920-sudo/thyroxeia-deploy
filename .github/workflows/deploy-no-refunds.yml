@@ -31,8 +31,8 @@ jobs:
             echo "Missing patched payment route file" >&2
             exit 1
           fi
-          if [ -f worker_patched.js ]; then
-            cp worker_patched.js worker.js
+          if [ -f worker_patched_v2.js ]; then
+            cp worker_patched_v2.js worker.js
           else
             echo "Missing patched worker file" >&2
             exit 1
