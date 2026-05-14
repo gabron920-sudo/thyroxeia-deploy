@@ -16,8 +16,8 @@ jobs:
       - name: Apply patched files to active paths
         run: |
           set -e
-          if [ -f public/index_cancel_policy_patched.html ]; then
-            cp public/index_cancel_policy_patched.html public/index.html
+      if [ -f public/index_otp8_patched.html ]; then
+  cp public/index_otp8_patched.html public/index.html
           elif [ -f public/index_patched.html ]; then
             cp public/index_patched.html public/index.html
           else
