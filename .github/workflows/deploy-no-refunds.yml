@@ -31,7 +31,13 @@ jobs:
             echo "Missing patched payment route file" >&2
             exit 1
           fi
-
+          if [ -f worker_patched.js ]; then
+            cp worker_patched.js worker.js
+          else
+            echo "Missing patched worker file" >&2
+            exit 1
+          fi
+          
       - name: Verify no-refunds patch markers
         run: |
           grep -q "current billing period" public/index.html
