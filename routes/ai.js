@@ -25,6 +25,18 @@ function nextKey(env) {
 
 // ── Daily AI call limits per plan ─────────────────────────────────────────────
 const PLAN_LIMITS = { free: 25, student: 60, pro: 150, elite: 300 }
+const FEATURE_ACCESS = {
+  'generate-cards': ['free','student','pro','elite'],
+  'generate-quiz': ['student','pro','elite'],
+  'timed-quiz': ['student','pro','elite'],
+  'grade-answer': ['student','pro','elite'],
+  'chat': ['student','pro','elite'],
+  'study-guide': ['student','pro','elite'],
+}
+function canUseFeature(plan, type) {
+  const allowed = FEATURE_ACCESS[type]
+  return !allowed || allowed.includes(plan || 'free')
+}
 
 // ── POST /ai ──────────────────────────────────────────────────────────────────
 app.post('/', async (c) => {
@@ -74,6 +86,12 @@ app.post('/', async (c) => {
 
   // ── 3. Validate request body ───────────────────────────────────────────────
   const body = await c.req.json()
+  if (body?.type && !canUseFeature(userPlan, body.type)) {
+    return c.json({
+      error: `${body.type} is not available on the ${userPlan} plan. Upgrade to unlock this feature.`,
+      plan: userPlan
+    }, 403)
+  }
   let { prompt, model, history } = body
 
   // ── Build prompt from type+payload if frontend sends structured call ────────
@@ -130,23 +148,42 @@ ${cards}`
 
   try {
     const API_KEY = nextKey(c.env)
-    const targetModel = model || 'gemini-1.5-flash'
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/${targetModel}:generateContent?key=${API_KEY}`
+    const requestedModel = model || c.env.GEMINI_MODEL || 'gemini-2.0-flash'
+    const modelCandidates = [...new Set([
+      requestedModel,
+      'gemini-2.0-flash',
+      'gemini-2.5-flash',
+      'gemini-flash-latest',
+    ].filter(Boolean))]
 
     const contents = history
       ? [...history, { role: 'user', parts: [{ text: prompt }] }]
       : [{ role: 'user', parts: [{ text: prompt }] }]
 
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ contents, generationConfig: { maxOutputTokens: 2048 } })
-    })
+    let targetModel = modelCandidates[0]
+    let data = null
+    let response = null
+    let lastError = null
 
-    const data = await response.json()
-    if (!response.ok) {
+    for (const candidate of modelCandidates) {
+      targetModel = candidate
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${candidate}:generateContent?key=${API_KEY}`
+      response = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ contents, generationConfig: { maxOutputTokens: 2048 } })
+      })
+      data = await response.json()
+      if (response.ok) break
+      lastError = data?.error?.message || `AI generation failed with ${candidate}`
+      const retryableModelError = response.status === 404 || /not found|not supported/i.test(lastError)
+      if (!retryableModelError) break
+      console.warn(`[AI] Model ${candidate} failed, trying next candidate:`, lastError)
+    }
+
+    if (!response?.ok) {
       console.error('[AI Error]', data)
-      return c.json({ error: data.error?.message || 'AI generation failed' }, response.status)
+      return c.json({ error: lastError || data?.error?.message || 'AI generation failed' }, response?.status || 500)
     }
 
     const text = data.candidates?.[0]?.content?.parts?.[0]?.text || 'No response from AI.'
