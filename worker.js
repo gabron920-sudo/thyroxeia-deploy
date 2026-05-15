@@ -31,7 +31,17 @@ function renderPayPal(plan) {
   }`
 
   return html
-    .replace(/\n\s*timed:\s*\['student','pro','elite'\],/g, '')
+    .replace(/
+\s*timed:\s*\['student','pro','elite'\],/g, '')
+    .replace(/
+\s*type:\s*\['student','pro','elite'\],/g, '')
+    .replace(/\s*timed:\s*\['student','pro','elite'\],/g, '')
+    .replace(/\s*type:\s*\['student','pro','elite'\],/g, '')
+    .replace('const PLAN_LIMITS = { free: 25, student: 60, pro: 150, elite: 300 }', 'const PLAN_LIMITS = { free: 15, student: 40, pro: 80, elite: 120 }')
+    .replace(/25 AI calls\/day/g, '15 AI calls/day')
+    .replace(/60 AI calls\/day/g, '40 AI calls/day')
+    .replace(/150 AI calls\/day/g, '80 AI calls/day')
+    .replace(/300 AI calls\/day/g, '120 AI calls/day')    .replace(/\n\s*timed:\s*\['student','pro','elite'\],/g, '')
     .replace(/\n\s*type:\s*\['student','pro','elite'\],/g, '')
     .replace('<li class="no"><span class="check-no">✗</span> Quiz & Timed modes</li>', '<li class="yes"><span class="check-yes">✓</span> Timed Test & Type Answer</li><li class="no"><span class="check-no">✗</span> Quiz Mode</li>')
     .replace('2 decks · 30 cards · 25 AI calls/day', '2 decks · 30 cards · Timed + Type Answer · 25 AI calls/day')
