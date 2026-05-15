@@ -10,7 +10,7 @@ const app = new Hono()
 // CORS — locked to approved frontends in production.
 // Set ALLOWED_ORIGINS as comma-separated origins if you add a custom domain.
 const DEFAULT_ALLOWED_ORIGINS = [
-  'https://thyroxeia-deploy-production.up.railway.app',
+  'https://thyroxeia.fancy-sky-31cf.workers.dev',
 ]
 
 app.use('*', cors({
