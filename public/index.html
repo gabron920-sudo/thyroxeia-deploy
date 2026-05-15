@@ -4,7 +4,7 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
 <title>Thyroxeia AI — Study Smarter with Gemini AI</title>
-<meta name="description" content="Thyroxeia AI turns your notes, PDFs, and topics into flashcards, quizzes, and a real AI tutor — powered by advanced Gemini AI."/>
+<meta name="description" content="Thyroxeia AI turns notes, text-based PDFs, and topics into flashcards, quizzes, timed tests, and an AI tutor — powered by Gemini AI."/>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>"/>
 
 <!-- Supabase (anon key is PUBLIC by design — safe in frontend) -->
@@ -178,6 +178,7 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',system-ui,sans-s
 @media(max-width:768px){.col-2,.col-3,.col-4{grid-template-columns:1fr}.sidebar{display:none}.main-content{margin-left:0}.hero h1{font-size:2rem}}
 .page{display:none}.page.active{display:block}
 </style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 </head>
 <body>
 <div id="toast-container"></div>
@@ -200,16 +201,16 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',system-ui,sans-s
     <div class="container">
       <div class="hero-badge">🚀 Just Launched — Early Access · Premium AI Study</div>
       <h1>Study Smarter with<br><span class="grad-text">AI That Actually Works</span></h1>
-      <p class="hero-sub">Thyroxeia AI turns your notes, PDFs, and topics into flashcards, quizzes, and a real AI tutor — powered by advanced Gemini AI.</p>
+      <p class="hero-sub">Thyroxeia AI turns notes, text-based PDFs, and topics into flashcards, quizzes, timed tests, and an AI tutor — powered by Gemini AI.</p>
       <div class="hero-btns">
         <button class="btn btn-primary btn-lg" onclick="showAuth('signup')">🚀 Start Now — It's Free</button>
         <button class="btn btn-outline btn-lg" onclick="scrollToSection('pricing')">View Pricing</button>
       </div>
       <div class="stat-chips">
         <div class="stat-chip">⚡ Gemini AI Powered</div>
-        <div class="stat-chip">🌍 80+ Languages</div>
+        <div class="stat-chip">🌍 Multilingual AI</div>
         <div class="stat-chip">🃏 6 Study Modes</div>
-        <div class="stat-chip">📄 PDF Upload</div>
+        <div class="stat-chip">📄 Text PDF Upload</div>
         <div class="stat-chip">🎮 Gamified XP</div>
       </div>
     </div>
@@ -247,21 +248,21 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',system-ui,sans-s
         <h2 class="section-title">Everything You Need<br>to Ace Any Exam</h2>
       </div>
       <div class="grid col-4 gap-4">
-        <div class="glass feature-card"><div class="feature-icon" style="background:rgba(124,58,237,.15)">🃏</div><h3 class="font-semibold mb-2">Flashcards</h3><p class="text-sm opacity-70">Spaced repetition with SM-2 algorithm for maximum retention</p></div>
+        <div class="glass feature-card"><div class="feature-icon" style="background:rgba(124,58,237,.15)">🃏</div><h3 class="font-semibold mb-2">Flashcards</h3><p class="text-sm opacity-70">Smart review flow with hard-card tracking for better retention</p></div>
         <div class="glass feature-card"><div class="feature-icon" style="background:rgba(59,130,246,.15)">⚡</div><h3 class="font-semibold mb-2">Quiz Mode</h3><p class="text-sm opacity-70">AI-generated multiple choice quizzes from your materials</p></div>
         <div class="glass feature-card"><div class="feature-icon" style="background:rgba(245,158,11,.15)">⏱️</div><h3 class="font-semibold mb-2">Timed Test</h3><p class="text-sm opacity-70">Speed-based challenges with XP bonuses for fast answers</p></div>
         <div class="glass feature-card"><div class="feature-icon" style="background:rgba(16,185,129,.15)">✏️</div><h3 class="font-semibold mb-2">Type Answer</h3><p class="text-sm opacity-70">Active recall by typing answers from memory</p></div>
         <div class="glass feature-card"><div class="feature-icon" style="background:rgba(239,68,68,.15)">🎮</div><h3 class="font-semibold mb-2">Match Game</h3><p class="text-sm opacity-70">Fun memory training matching questions to answers</p></div>
         <div class="glass feature-card"><div class="feature-icon" style="background:rgba(124,58,237,.15)">🤖</div><h3 class="font-semibold mb-2">AI Tutor</h3><p class="text-sm opacity-70">Chat with an AI expert on any subject, anytime</p></div>
-        <div class="glass feature-card"><div class="feature-icon" style="background:rgba(245,158,11,.15)">📄</div><h3 class="font-semibold mb-2">PDF Upload</h3><p class="text-sm opacity-70">Upload any PDF and generate flashcards automatically</p></div>
-        <div class="glass feature-card"><div class="feature-icon" style="background:rgba(16,185,129,.15)">📊</div><h3 class="font-semibold mb-2">Analytics</h3><p class="text-sm opacity-70">Track streaks, XP, weak spots and achievements</p></div>
+        <div class="glass feature-card"><div class="feature-icon" style="background:rgba(245,158,11,.15)">📄</div><h3 class="font-semibold mb-2">Text PDF Upload</h3><p class="text-sm opacity-70">Upload text-based PDFs and generate flashcards automatically</p></div>
+        <div class="glass feature-card"><div class="feature-icon" style="background:rgba(16,185,129,.15)">📊</div><h3 class="font-semibold mb-2">Analytics</h3><p class="text-sm opacity-70">Track streaks, XP, cards studied, and weak spots</p></div>
       </div>
     </div>
   </section>
   <section class="section" style="background:var(--bg2);overflow:hidden">
     <div class="container text-center mb-8">
       <div class="section-label">Global Learning</div>
-      <h2 class="section-title">Study in 80+ Languages</h2>
+      <h2 class="section-title">Study with Multilingual AI</h2>
     </div>
     <div class="lang-scroll">
       <div class="lang-track">
@@ -302,7 +303,7 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',system-ui,sans-s
             <li class="yes"><span class="check-yes">✓</span> All study modes</li>
             <li class="yes"><span class="check-yes">✓</span> 60 AI calls/day</li>
             <li class="yes"><span class="check-yes">✓</span> AI Tutor Chat</li>
-            <li class="no"><span class="check-no">✗</span> Cram Mode</li>
+            <li class="no"><span class="check-no">✗</span> Unlimited decks</li>
           </ul>
           <button class="btn btn-outline w-full" onclick="handlePlanClick('student')">📖 Get Student</button>
         </div>
@@ -317,7 +318,7 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',system-ui,sans-s
             <li class="yes"><span class="check-yes">✓</span> All study modes</li>
             <li class="yes"><span class="check-yes">✓</span> 150 AI calls/day</li>
             <li class="yes"><span class="check-yes">✓</span> AI Tutor Chat</li>
-            <li class="yes"><span class="check-yes">✓</span> Priority AI speed</li>
+            <li class="yes"><span class="check-yes">✓</span> Higher AI limit</li>
           </ul>
           <button class="btn btn-primary w-full" onclick="handlePlanClick('pro')">⚡ Get Pro</button>
         </div>
@@ -438,7 +439,7 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',system-ui,sans-s
       <div style="border-top:1px solid var(--border);margin:12px 0"></div>
       <div class="flex justify-between items-center"><span class="font-semibold">Total</span><span class="font-bold text-lg grad-text" id="payment-amount">₱220/month</span></div>
     </div>
-    <!-- PayPal buttons rendered by JS — order creation & capture go via Railway backend -->
+    <!-- PayPal buttons rendered by JS — order creation & capture go via Cloudflare Worker backend -->
     <div id="paypal-button-container" style="min-height:50px"></div>
     <p class="text-xs text-center mt-4" style="color:var(--text3)">🔒 Secure payment via PayPal. Cancel anytime.</p>
   </div>
@@ -619,19 +620,25 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',system-ui,sans-s
         <div class="stat-box"><div class="stat-num" style="color:var(--green)" id="stat-decks">0</div><div class="text-sm opacity-70 mt-1">Decks Created</div></div>
         <div class="stat-box"><div class="stat-num" style="color:var(--blue)" id="stat-cards">0</div><div class="text-sm opacity-70 mt-1">Cards Studied</div></div>
       </div>
-      <div class="glass p-6" style="max-width:500px">
-        <h3 class="font-semibold mb-4">XP Progress</h3>
-        <div class="xp-bar" style="height:16px;margin-bottom:8px"><div class="xp-fill" id="analytics-xp-fill" style="width:0%"></div></div>
-        <p class="text-sm" style="color:var(--text3)"><span id="analytics-xp-text">0</span> XP — <span id="analytics-level">Level 1</span></p>
+      <div class="grid col-2 gap-4">
+        <div class="glass p-6">
+          <h3 class="font-semibold mb-4">XP Progress</h3>
+          <div class="xp-bar" style="height:16px;margin-bottom:8px"><div class="xp-fill" id="analytics-xp-fill" style="width:0%"></div></div>
+          <p class="text-sm" style="color:var(--text3)"><span id="analytics-xp-text">0</span> XP — <span id="analytics-level">Level 1</span></p>
+        </div>
+        <div class="glass p-6">
+          <h3 class="font-semibold mb-4">Weak Spots</h3>
+          <div id="weak-spots-list" class="text-sm" style="color:var(--text2)">Missed and hard cards will appear here.</div>
+        </div>
       </div>
     </div>
     <!-- UPGRADE -->
     <div id="app-upgrade" class="app-section hidden">
       <h1 class="font-bold text-2xl mb-2">⚡ Upgrade Your Plan</h1>
-      <p class="text-sm mb-8" style="color:var(--text2)">Unlock more decks, unlimited AI, and all study modes.</p>
+      <p class="text-sm mb-8" style="color:var(--text2)">Unlock higher AI limits, more decks, and premium study tools.</p>
       <div class="pricing-grid">
         <div class="pricing-card"><div class="plan-chip plan-student mb-4">STUDENT</div><h3 class="font-bold text-lg">Student</h3><div class="price-amount">₱110</div><div class="price-per">/month</div><ul class="feature-list"><li class="yes"><span class="check-yes">✓</span> 10 decks, 80 cards each</li><li class="yes"><span class="check-yes">✓</span> All study modes</li><li class="yes"><span class="check-yes">✓</span> 60 AI calls/day</li><li class="yes"><span class="check-yes">✓</span> AI Tutor Chat</li></ul><button class="btn btn-outline w-full" onclick="openPayment('student')">📖 Upgrade to Student</button></div>
-        <div class="pricing-card popular"><div class="popular-badge">⭐ MOST POPULAR</div><div class="plan-chip plan-pro mb-4">PRO</div><h3 class="font-bold text-lg">Pro</h3><div class="price-amount">₱220</div><div class="price-per">/month</div><ul class="feature-list"><li class="yes"><span class="check-yes">✓</span> Unlimited decks & cards</li><li class="yes"><span class="check-yes">✓</span> All study modes</li><li class="yes"><span class="check-yes">✓</span> 150 AI calls/day</li><li class="yes"><span class="check-yes">✓</span> AI Tutor Chat</li><li class="yes"><span class="check-yes">✓</span> Priority AI speed</li></ul><button class="btn btn-primary w-full" onclick="openPayment('pro')">⚡ Upgrade to Pro</button></div>
+        <div class="pricing-card popular"><div class="popular-badge">⭐ MOST POPULAR</div><div class="plan-chip plan-pro mb-4">PRO</div><h3 class="font-bold text-lg">Pro</h3><div class="price-amount">₱220</div><div class="price-per">/month</div><ul class="feature-list"><li class="yes"><span class="check-yes">✓</span> Unlimited decks & cards</li><li class="yes"><span class="check-yes">✓</span> All study modes</li><li class="yes"><span class="check-yes">✓</span> 150 AI calls/day</li><li class="yes"><span class="check-yes">✓</span> AI Tutor Chat</li><li class="yes"><span class="check-yes">✓</span> Higher AI limit</li></ul><button class="btn btn-primary w-full" onclick="openPayment('pro')">⚡ Upgrade to Pro</button></div>
         <div class="pricing-card"><div class="plan-chip plan-elite mb-4">🔥 ELITE</div><h3 class="font-bold text-lg">Elite</h3><div class="price-amount">₱280</div><div class="price-per">/month</div><ul class="feature-list"><li class="yes"><span class="check-yes">✓</span> Unlimited decks & cards</li><li class="yes"><span class="check-yes">✓</span> 300 AI calls/day</li><li class="yes"><span class="check-yes">✓</span> All study modes</li><li class="yes"><span class="check-yes">✓</span> 🌟 Gold username badge</li><li class="yes"><span class="check-yes">✓</span> 📢 Server-wide shoutout</li><li class="yes"><span class="check-yes">✓</span> Priority support</li></ul><button class="btn btn-outline w-full" onclick="openPayment('elite')" style="border-color:var(--yellow);color:var(--yellow)">🔥 Upgrade to Elite</button></div>
       </div>
     </div>
@@ -687,6 +694,43 @@ let quizQ = [], quizIndex = 0, quizScore = 0
 let timedTimer = null, timedSecs = 15
 let matchState = {}, matchTimer = null, matchSeconds = 0
 let typeIndex = 0, typeScore = 0
+
+const FEATURE_RULES = {
+  tutor: ['student','pro','elite'],
+  guide: ['student','pro','elite'],
+  quiz:  ['student','pro','elite'],
+  timed: ['student','pro','elite'],
+  type:  ['student','pro','elite'],
+  match: ['student','pro','elite'],
+}
+function hasPlan(plans) { return plans.includes((userProfile.plan || 'free').toLowerCase()) }
+function requireFeature(feature, label) {
+  const plans = FEATURE_RULES[feature]
+  if (!plans || hasPlan(plans)) return true
+  toast(`${label} is a premium feature. Upgrade to unlock it.`, 'error')
+  appNav('upgrade')
+  return false
+}
+function weakKey() { return 'weak_cards_' + (currentUser?.id || 'guest') }
+function getWeakCards() { try { return JSON.parse(localStorage.getItem(weakKey()) || '{}') } catch { return {} } }
+function saveWeakCards(data) { if (currentUser) localStorage.setItem(weakKey(), JSON.stringify(data)) }
+function trackWeakCard(card, reason='missed') {
+  if (!currentUser || !card) return
+  const data = getWeakCards(); const id = `${currentDeck?.name || 'Deck'}::${card.q}`
+  data[id] = { q: card.q, a: card.a, deck: currentDeck?.name || 'Deck', misses: (data[id]?.misses || 0) + 1, reason, updatedAt: new Date().toISOString() }
+  saveWeakCards(data)
+}
+function clearWeakCard(card) {
+  if (!currentUser || !card) return
+  const data = getWeakCards(); const id = `${currentDeck?.name || 'Deck'}::${card.q}`
+  if (data[id]) { data[id].misses = Math.max(0, (data[id].misses || 1) - 1); if (data[id].misses === 0) delete data[id]; saveWeakCards(data) }
+}
+function renderWeakSpots() {
+  const el = document.getElementById('weak-spots-list'); if (!el) return
+  const items = Object.values(getWeakCards()).sort((a,b)=>(b.misses||0)-(a.misses||0)).slice(0,6)
+  if (!items.length) { el.textContent = 'No weak spots yet. Missed/hard cards will appear here.'; return }
+  el.innerHTML = items.map(x => `<div class="mb-3"><strong>${escHtml(x.deck)}</strong><br/><span>${escHtml(x.q).substring(0,90)}${x.q.length>90?'...':''}</span><br/><span style="color:var(--red)">${x.misses} weak mark(s)</span></div>`).join('')
+}
 
 // ─── BACKEND CALL HELPER ───────────────────────────────────────────────────
 async function backend(endpoint, body) {
@@ -827,7 +871,7 @@ async function handleForgotPassword() {
   else { toast('✅ Password reset email sent! Check your inbox.', 'success') }
 }
 
-// SIGNUP — Supabase creates account, Railway backend sends branded email
+// SIGNUP — Supabase creates account, Cloudflare Worker backend sends branded email
 async function handleSignup(e) {
   e.preventDefault()
   const btn = document.getElementById('signup-btn')
@@ -1063,10 +1107,12 @@ function getStreak() {
 }
 
 function appNav(section) {
+  if (section === 'tutor' && !requireFeature('tutor', 'AI Tutor')) return
   document.querySelectorAll('.sidebar-btn').forEach(b => b.classList.remove('active'))
   document.querySelectorAll('.app-section').forEach(s => s.classList.add('hidden'))
   document.getElementById(`nav-${section}`)?.classList.add('active')
   document.getElementById(`app-${section}`)?.classList.remove('hidden')
+  if (section === 'analytics') renderWeakSpots()
 }
 
 // ─── DECKS ─────────────────────────────────────────────────────────────────
@@ -1100,7 +1146,7 @@ function deleteDeck(i) {
   currentDecks.splice(i, 1); saveDecks(); renderDecks(); toast('Deck deleted', 'info')
 }
 
-// ─── CREATE DECK (AI via Railway backend) ───────────────────────────────────
+// ─── CREATE DECK (AI via Cloudflare Worker backend) ───────────────────────────────────
 async function handleCreateDeck() {
   const name    = document.getElementById('deck-name').value.trim()
   const content = document.getElementById('deck-content').value.trim()
@@ -1138,7 +1184,7 @@ async function handleCreateDeck() {
   }
 
   try {
-    // ← AI call goes to Railway backend (Gemini key stays server-side)
+    // ← AI call goes to Cloudflare Worker backend (Gemini key stays server-side)
     const data = await aiCall('generate-cards', { text: textInput || 'Topic: ' + name, count: cappedCount })
     const deck = { id: Date.now().toString(), name, emoji: pickEmoji(name), cards: data.cards, created: new Date().toISOString() }
     currentDecks.unshift(deck); saveDecks(); renderDecks(); addXP(10)
@@ -1166,27 +1212,30 @@ function pickEmoji(name) {
 
 // ─── PDF EXTRACTION (client-side text only — no secrets here) ──────────────
 async function extractPDFText(file) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader()
-    reader.onload = async e => {
-      try {
-        const arr = new Uint8Array(e.target.result)
-        const text = new TextDecoder('latin1').decode(arr)
-        const chunks = []
-        const re = /\(([^)]{2,})\)/g
-        let m
-        while ((m = re.exec(text)) !== null) {
-          const t = m[1].replace(/\\n/g,' ').trim()
-          if (t.length > 3 && /[a-zA-Z]/.test(t)) chunks.push(t)
-        }
-        const result = chunks.join(' ').substring(0, 6000)
-        if (result.length < 50) reject(new Error('Could not extract text'))
-        else resolve(result)
-      } catch(err) { reject(err) }
+  const arr = await file.arrayBuffer()
+  if (window.pdfjsLib) {
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js'
+    const pdf = await pdfjsLib.getDocument({ data: arr }).promise
+    const pages = []
+    for (let i = 1; i <= Math.min(pdf.numPages, 25); i++) {
+      const page = await pdf.getPage(i)
+      const content = await page.getTextContent()
+      pages.push(content.items.map(item => item.str).join(' '))
     }
-    reader.onerror = reject
-    reader.readAsArrayBuffer(file)
-  })
+    const result = pages.join('\n').replace(/\s+/g, ' ').trim().substring(0, 12000)
+    if (result.length >= 50) return result
+  }
+  const text = new TextDecoder('latin1').decode(new Uint8Array(arr))
+  const chunks = []
+  const re = /\(([^)]{2,})\)/g
+  let m
+  while ((m = re.exec(text)) !== null) {
+    const t = m[1].replace(/\\n/g,' ').trim()
+    if (t.length > 3 && /[a-zA-Z]/.test(t)) chunks.push(t)
+  }
+  const result = chunks.join(' ').substring(0, 12000)
+  if (result.length < 50) throw new Error('Could not extract text from this PDF. If it is scanned/image-only, paste the text manually.')
+  return result
 }
 
 // ─── STUDY MODES ───────────────────────────────────────────────────────────
@@ -1198,6 +1247,8 @@ function openDeck(i) {
   updateStreak()  // track daily study streak
 }
 function setStudyMode(mode) {
+  const labels = { quiz:'Quiz Mode', timed:'Timed Test', type:'Type Answer', match:'Match Game', guide:'AI Study Guide' }
+  if (mode !== 'flashcard' && !requireFeature(mode, labels[mode] || 'This mode')) return
   studyMode = mode
   document.getElementById('study-mode-badge').textContent = mode
   ;['flashcard','quiz','timed','type','match','guide'].forEach(m =>
@@ -1223,15 +1274,16 @@ function flipCard() { document.getElementById('flashcard').classList.toggle('fli
 function nextCard() { if (cardIndex < currentCards.length - 1) { cardIndex++; showCard() } else { toast('🎉 Deck complete! Great work!', 'success'); addXP(5) } }
 function prevCard() { if (cardIndex > 0) { cardIndex--; showCard() } }
 function rateCard(rating) {
-  if (rating === 'again') currentCards.push(currentCards[cardIndex])
-  else if (rating === 'easy') addXP(3)
+  if (rating === 'again') { trackWeakCard(currentCards[cardIndex], 'again'); currentCards.push(currentCards[cardIndex]) }
+  else if (rating === 'hard') { trackWeakCard(currentCards[cardIndex], 'hard'); addXP(1) }
+  else if (rating === 'easy') { clearWeakCard(currentCards[cardIndex]); addXP(3) }
   else if (rating === 'good') addXP(2)
   userProfile.cards_studied = (userProfile.cards_studied || 0) + 1
   localStorage.setItem(`thyroxeia_profile_${currentUser?.id}`, JSON.stringify({ ...userProfile, plan_user_id: currentUser?.id }))
   nextCard()
 }
 
-// QUIZ (AI via Railway backend)
+// QUIZ (AI via Cloudflare Worker backend)
 async function initQuiz() {
   quizIndex = 0; quizScore = 0
   document.getElementById('quiz-score').textContent = quizScore
@@ -1271,9 +1323,9 @@ function selectQuiz(el) {
   if (chosen === correct) {
     el.classList.add('correct'); quizScore++; document.getElementById('quiz-score').textContent = quizScore; addXP(5); toast('✅ Correct! +5 XP', 'success')
   } else {
-    el.classList.add('wrong')
+    trackWeakCard(card, 'timed'); el.classList.add('wrong')
     document.querySelectorAll('#quiz-options .quiz-option').forEach(b => { if (b.dataset.opt === correct) b.classList.add('correct') })
-    toast('❌ Wrong. Study this one!', 'error')
+    trackWeakCard(card, 'quiz'); toast('❌ Wrong. Study this one!', 'error')
   }
   quizIndex++; document.getElementById('quiz-next-btn').classList.remove('hidden')
 }
@@ -1314,13 +1366,13 @@ function selectTimed(el) {
     quizScore += bonus; document.getElementById('timed-score').textContent = quizScore
     toast('✅ Correct! +' + bonus + ' XP (speed bonus)', 'success')
   } else {
-    el.classList.add('wrong')
+    trackWeakCard(card, 'timed'); el.classList.add('wrong')
     document.querySelectorAll('#timed-options .quiz-option').forEach(b => { if (b.dataset.opt === correct) b.classList.add('correct') })
   }
   quizIndex++; setTimeout(showTimedQ, 1000)
 }
 
-// TYPE ANSWER (AI grading via Railway backend)
+// TYPE ANSWER (AI grading via Cloudflare Worker backend)
 function initType() {
   typeIndex = 0; typeScore = 0
   document.getElementById('type-feedback').classList.add('hidden')
@@ -1351,14 +1403,14 @@ async function checkTypeAnswer() {
     const result = await aiCall('grade-answer', { question: card.q, correctAnswer: card.a, userAnswer: answer })
     const isCorrect = result.correct
     const xpEarned  = isCorrect ? Math.max(1, result.score || 3) : 0
-    if (isCorrect) { typeScore++; addXP(xpEarned) }
+    if (isCorrect) { typeScore++; addXP(xpEarned); clearWeakCard(card) } else { trackWeakCard(card, 'type') }
     fb.innerHTML = `<div style="color:${isCorrect?'var(--green)':'var(--red)'};font-weight:600">${isCorrect?'✅':'❌'} ${result.feedback}</div><div class="text-sm opacity-70 mt-1">Model answer: ${card.a}</div>${isCorrect?`<div class="text-xs mt-1" style="color:var(--primary-light)">+${xpEarned} XP</div>`:''}`
   } catch(e) {
     // Fuzzy fallback if backend fails
     const words = card.a.toLowerCase().split(' ').filter(w=>w.length>3)
     const matchCount = words.filter(w=>answer.toLowerCase().includes(w)).length
     const isClose = matchCount >= Math.max(1, Math.floor(words.length * 0.4))
-    if (isClose) { typeScore++; addXP(3) }
+    if (isClose) { typeScore++; addXP(3); clearWeakCard(card) } else { trackWeakCard(card, 'type') }
     fb.innerHTML = `<div style="color:${isClose?'var(--green)':'var(--red)'};font-weight:600">${isClose?'✅ Correct! +3 XP':'❌ Not quite'}</div><div class="text-sm opacity-70 mt-1">Correct answer: ${card.a}</div>`
   }
   document.getElementById('type-next-btn').classList.remove('hidden')
@@ -1410,7 +1462,7 @@ function selectMatch(id, pair, type) {
   }
 }
 
-// AI TUTOR (via Railway backend)
+// AI TUTOR (via Cloudflare Worker backend)
 async function sendChat() {
   const input = document.getElementById('chat-input')
   const msg = input.value.trim(); if (!msg) return
@@ -1435,7 +1487,7 @@ async function sendChat() {
   msgs.scrollTop = msgs.scrollHeight
 }
 
-// STUDY GUIDE (via Railway backend)
+// STUDY GUIDE (via Cloudflare Worker backend)
 async function loadStudyGuide() {
   const content = document.getElementById('guide-content')
   content.innerHTML = '<div style="color:var(--text3)">🤖 Gemini is writing your study guide...</div>'
@@ -1451,13 +1503,13 @@ async function loadStudyGuide() {
   } catch(e) { content.innerHTML = '<div style="color:var(--red)">❌ Failed to generate. Try again.</div>' }
 }
 
-// ─── PAYMENT — PAYPAL (fully server-side via Railway backend) ──────────────
+// ─── PAYMENT — PAYPAL (fully server-side via Cloudflare Worker backend) ──────────────
 const PLAN_LIMITS = { free: 25, student: 60, pro: 150, elite: 300 }
 
 const PLANS = {
   free:    { name:'Free Plan',    desc:'Get started with basic features', label:'Free', amountDisplay:'₱0/month' },
   student: { name:'Student Plan', desc:'Perfect for regular study sessions', label:'Student', amountDisplay:'₱110/month' },
-  pro:     { name:'Pro Plan',     desc:'Unlimited everything + all study modes', label:'Pro', amountDisplay:'₱220/month' },
+  pro:     { name:'Pro Plan',     desc:'Unlimited decks/cards + higher AI limit', label:'Pro', amountDisplay:'₱220/month' },
   elite:   { name:'Elite Plan',   desc:'Pro + gold username + shoutout + priority support', label:'Elite', amountDisplay:'₱280/month' }
 }
 let _payCapturing = false, _payCompleted = false, _payAttempts = 0
@@ -1496,53 +1548,53 @@ function renderPayPal(plan) {
     paypal.Buttons({
       style: { layout:'vertical', color:'gold', shape:'rect', label:'pay', height:48 },
 
-      // ← Order created server-side via Railway (PayPal secret stays in backend)
-      createOrder: async () => {
+      // Subscription created server-side. PayPal secret stays in backend.
+      createSubscription: async () => {
         _payAttempts++
         if (_payAttempts > 5) { toast('Too many payment attempts. Please refresh.', 'error'); return Promise.reject(new Error('Rate limited')) }
         if (_payCompleted)    { toast('You already completed a purchase this session!', 'error'); return Promise.reject(new Error('Already purchased')) }
         if (_payCapturing)    return Promise.reject(new Error('In progress'))
         try {
           const data = await backend(BACKEND.PAYMENT, {
-            action: 'create-order',
-            payload: { plan, userId: currentUser.id }
+            action: 'create-subscription',
+            payload: { plan }
           })
-          return data.orderId
-        } catch(e) { toast('Could not create order: ' + e.message, 'error'); return Promise.reject(e) }
+          return data.subscriptionId
+        } catch(e) { toast('Could not create subscription: ' + e.message, 'error'); return Promise.reject(e) }
       },
 
-      // ← Capture verified server-side via Railway (amount + status checked)
+      // Subscription verified server-side with PayPal before plan is upgraded.
       onApprove: async (data) => {
         if (_payCapturing || _payCompleted) return
         _payCapturing = true
-        container.innerHTML = '<div style="text-align:center;padding:20px;color:var(--text3)">⏳ Verifying payment...</div>'
+        container.innerHTML = '<div style="text-align:center;padding:20px;color:var(--text3)">⏳ Verifying subscription...</div>'
         try {
+          const subscriptionId = data.subscriptionID || data.orderID
           const result = await backend(BACKEND.PAYMENT, {
-            action: 'capture-order',
-            payload: { orderId: data.orderID, plan, userId: currentUser.id }
+            action: 'activate-subscription',
+            payload: { subscriptionId, plan }
           })
           if (!result.success) {
-            _payCapturing = false; toast('Payment not verified. Contact support if charged.', 'error'); renderPayPal(plan); return
+            _payCapturing = false; toast(result.error || 'Subscription not verified. Contact support if charged.', 'error'); renderPayPal(plan); return
           }
           _payCompleted = true
-          // Update local profile after server confirmed
           userProfile.plan = plan
-          userProfile.paypal_order_id = result.orderId
+          userProfile.paypal_subscription_id = result.subscriptionId
+          userProfile.subscription_status = result.status || 'active'
           const profileKey = 'thyroxeia_profile_' + currentUser.id
           localStorage.setItem(profileKey, JSON.stringify({ ...userProfile, plan_user_id: currentUser.id }))
           updatePlanChip()
           closePayment()
-          toast('🎉 Payment verified! Welcome to ' + PLANS[plan].label + '!', 'success')
-          // Elite perks — fire and forget
+          toast('🎉 Subscription active! Welcome to ' + PLANS[plan].label + '!', 'success')
           if (plan === 'elite') {
             const meta  = currentUser.user_metadata || {}
             const dname = userProfile.display_name || meta.full_name || meta.first_name || 'A new Elite member'
-            backend(BACKEND.AUTH_EMAIL, { action:'elite-shoutout',    payload:{ userId: currentUser.id, displayName: dname } }).catch(()=>{})
-            backend(BACKEND.AUTH_EMAIL, { action:'send-elite-welcome', payload:{ email: currentUser.email, firstName: meta.first_name || '' } }).catch(()=>{})
+            backend(BACKEND.AUTH_EMAIL, { action:'elite-shoutout',    payload:{ displayName: dname } }).catch(()=>{})
+            backend(BACKEND.AUTH_EMAIL, { action:'send-elite-welcome', payload:{ firstName: meta.first_name || '' } }).catch(()=>{})
           }
           appNav('decks')
         } catch(e) {
-          _payCapturing = false; toast('Payment capture failed. You were NOT charged. Try again.', 'error'); renderPayPal(plan)
+          _payCapturing = false; toast('Subscription verification failed. If you were charged, contact support.', 'error'); renderPayPal(plan)
         }
       },
 
