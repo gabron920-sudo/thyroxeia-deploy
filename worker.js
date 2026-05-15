@@ -31,8 +31,8 @@ function renderPayPal(plan) {
   }`
 
   return html
-    .replace("  timed: ['student','pro','elite'],\n", '')
-    .replace("  type:  ['student','pro','elite'],\n", '')
+    .replace(/\n\s*timed:\s*\['student','pro','elite'\],/g, '')
+    .replace(/\n\s*type:\s*\['student','pro','elite'\],/g, '')
     .replace('<li class="no"><span class="check-no">✗</span> Quiz & Timed modes</li>', '<li class="yes"><span class="check-yes">✓</span> Timed Test & Type Answer</li><li class="no"><span class="check-no">✗</span> Quiz Mode</li>')
     .replace('2 decks · 30 cards · 25 AI calls/day', '2 decks · 30 cards · Timed + Type Answer · 25 AI calls/day')
     .replace('&intent=${intent}&disable-funding=credit,card', '&intent=${intent}&vault=true&disable-funding=credit,card')
