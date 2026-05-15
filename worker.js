@@ -36,6 +36,39 @@ function renderPayPal(plan) {
     .replace('<li class="no"><span class="check-no">✗</span> Quiz & Timed modes</li>', '<li class="yes"><span class="check-yes">✓</span> Timed Test & Type Answer</li><li class="no"><span class="check-no">✗</span> Quiz Mode</li>')
     .replace('2 decks · 30 cards · 25 AI calls/day', '2 decks · 30 cards · Timed + Type Answer · 25 AI calls/day')
     .replace('&intent=${intent}&disable-funding=credit,card', '&intent=${intent}&vault=true&disable-funding=credit,card')
+    .replace('redirectTo: window.location.origin + window.location.pathname', "redirectTo: window.location.origin + window.location.pathname + '?reset=1'")
+    .replace(
+      "if ((event === 'SIGNED_IN' || event === 'INITIAL_SESSION') && session?.user) {",
+      "if (event === 'PASSWORD_RECOVERY' && session?.user) { currentUser = session.user; showPasswordReset(); return }\n  if ((event === 'SIGNED_IN' || event === 'INITIAL_SESSION') && session?.user) {"
+    )
+    .replace(
+      'async function handleForgotPassword() {',
+      String.raw`function showPasswordReset() {
+  showPage('auth')
+  const box = document.querySelector('#page-auth .auth-box') || document.querySelector('#page-auth .glass') || document.getElementById('page-auth')
+  if (!box) return
+  box.innerHTML = ` + "`" + `<h2 class="font-bold text-2xl mb-2">Reset Password</h2>
+    <p class="text-sm mb-4" style="color:var(--text2)">Enter your new password below.</p>
+    <div class="mb-4"><label class="label">New Password</label><input class="input" type="password" id="reset-new-password" placeholder="New password" minlength="8" /></div>
+    <div class="mb-4"><label class="label">Confirm Password</label><input class="input" type="password" id="reset-confirm-password" placeholder="Confirm password" minlength="8" /></div>
+    <button class="btn btn-primary w-full" onclick="handlePasswordUpdate()">Update Password</button>
+    <button class="btn btn-ghost w-full mt-3" onclick="showAuth('login')">Back to login</button>` + "`" + `
+}
+
+async function handlePasswordUpdate() {
+  const pass = document.getElementById('reset-new-password')?.value || ''
+  const conf = document.getElementById('reset-confirm-password')?.value || ''
+  if (pass.length < 8) { toast('Password must be at least 8 characters.', 'error'); return }
+  if (pass !== conf) { toast('Passwords do not match.', 'error'); return }
+  const { error } = await sb.auth.updateUser({ password: pass })
+  if (error) { toast(error.message || 'Password update failed.', 'error'); return }
+  toast('Password updated. Please log in again.', 'success')
+  await sb.auth.signOut()
+  showAuth('login')
+}
+
+async function handleForgotPassword() {`
+    )
     .replace(oldPayPalContainer, newPayPalContainer)
     .replace(oldRenderStart, newRenderStart)
 }
