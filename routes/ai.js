@@ -1,4 +1,3 @@
-
 /**
  * /ai — Gemini proxy with key rotation, JWT auth, and plan-based quotas
  *
@@ -24,7 +23,7 @@ function nextKey(env) {
 }
 
 // ── Daily AI call limits per plan ─────────────────────────────────────────────
-const PLAN_LIMITS = { free: 25, student: 60, pro: 150, elite: 300 }
+const PLAN_LIMITS = { free: 15, student: 40, pro: 80, elite: 120 }
 const FEATURE_ACCESS = {
   'generate-cards': ['free','student','pro','elite'],
   'generate-quiz': ['student','pro','elite'],
