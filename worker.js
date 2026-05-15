@@ -3,12 +3,27 @@ import { cors } from 'hono/cors'
 import aiRouter from './routes/ai.js'
 import authRouter from './routes/auth-email.js'
 import paymentRouter from './routes/payment.js'
+import adminRouter from './routes/admin.js'
 
 const app = new Hono()
 
-// CORS — still handy if you ever embed from another domain
+// CORS — locked to approved frontends in production.
+// Set ALLOWED_ORIGINS as comma-separated origins if you add a custom domain.
+const DEFAULT_ALLOWED_ORIGINS = [
+  'https://thyroxeia-deploy-production.up.railway.app',
+]
+
 app.use('*', cors({
-  origin: '*',
+  origin: (origin, c) => {
+    const allowed = (c.env.ALLOWED_ORIGINS || DEFAULT_ALLOWED_ORIGINS.join(','))
+      .split(',')
+      .map(o => o.trim())
+      .filter(Boolean)
+
+    // Allow same-origin/server-to-server requests with no Origin header.
+    if (!origin) return origin
+    return allowed.includes(origin) ? origin : null
+  },
   allowMethods: ['GET', 'POST', 'OPTIONS'],
   allowHeaders: ['Content-Type', 'Authorization'],
   maxAge: 86400,
@@ -18,6 +33,7 @@ app.use('*', cors({
 app.route('/ai',      aiRouter)
 app.route('/auth',    authRouter)
 app.route('/payment', paymentRouter)
+app.route('/admin',   adminRouter)
 
 app.get('/api/paypal-config', (c) =>
   c.json({
