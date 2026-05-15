@@ -1,4 +1,3 @@
-
 /**
  * /ai — Gemini proxy with key rotation, JWT auth, and plan-based quotas
  *
@@ -28,8 +27,8 @@ const PLAN_LIMITS = { free: 25, student: 60, pro: 150, elite: 300 }
 const FEATURE_ACCESS = {
   'generate-cards': ['free','student','pro','elite'],
   'generate-quiz': ['student','pro','elite'],
-  'timed-quiz': ['student','pro','elite'],
-  'grade-answer': ['student','pro','elite'],
+  'timed-quiz': ['free','student','pro','elite'],
+  'grade-answer': ['free','student','pro','elite'],
   'chat': ['student','pro','elite'],
   'study-guide': ['student','pro','elite'],
 }
