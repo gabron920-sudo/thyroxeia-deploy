@@ -48,7 +48,7 @@ async function getPayPalToken(env) {
       'Content-Type':  'application/x-www-form-urlencoded',
       'Authorization': 'Basic ' + btoa(`${env.PAYPAL_CLIENT_ID}:${env.PAYPAL_CLIENT_SECRET}`),
     },
-    body: 'grant_type=client_credentials',
+    body: 'grant_type=client_credentials', 
   })
   if (!resp.ok) {
     const t = await resp.text()
