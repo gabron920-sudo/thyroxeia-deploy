@@ -147,7 +147,9 @@ ${cards}`
   if (!prompt) return c.json({ error: 'Missing prompt' }, 400)
 
   try {
-    const API_KEY = nextKey(c.env)
+    const geminiKeys = getGeminiKeys(c.env)
+    if (!geminiKeys.length) throw new Error('No Gemini API keys configured on server')
+
     const requestedModel = model || c.env.GEMINI_MODEL || 'gemini-2.0-flash'
     const modelCandidates = [...new Set([
       requestedModel,
@@ -165,25 +167,33 @@ ${cards}`
     let response = null
     let lastError = null
 
-    for (const candidate of modelCandidates) {
-      targetModel = candidate
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/${candidate}:generateContent?key=${API_KEY}`
-      response = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ contents, generationConfig: { maxOutputTokens: 2048 } })
-      })
-      data = await response.json()
-      if (response.ok) break
-      lastError = data?.error?.message || `AI generation failed with ${candidate}`
-      const retryableModelError = response.status === 404 || /not found|not supported/i.test(lastError)
-      if (!retryableModelError) break
-      console.warn(`[AI] Model ${candidate} failed, trying next candidate:`, lastError)
+    // Try every configured Gemini key and every model fallback before failing.
+    // This helps when one key/project hits quota or one model name is unavailable.
+    const shuffledKeys = [...geminiKeys].sort(() => Math.random() - 0.5)
+    outer: for (const apiKey of shuffledKeys) {
+      for (const candidate of modelCandidates) {
+        targetModel = candidate
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/${candidate}:generateContent?key=${apiKey}`
+        response = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ contents, generationConfig: { maxOutputTokens: 2048 } })
+        })
+        data = await response.json()
+        if (response.ok) break outer
+        lastError = data?.error?.message || `AI generation failed with ${candidate}`
+        const retryable = response.status === 404 || response.status === 429 || /not found|not supported|quota|rate limit|exceeded/i.test(lastError)
+        if (!retryable) break outer
+        console.warn(`[AI] Gemini attempt failed (${candidate}); trying fallback if available:`, lastError)
+      }
     }
 
     if (!response?.ok) {
       console.error('[AI Error]', data)
-      return c.json({ error: lastError || data?.error?.message || 'AI generation failed' }, response?.status || 500)
+      return c.json({
+        error: 'AI quota/model error. All configured Gemini keys/models failed. Check Google AI Studio billing/quota or add fresh keys.',
+        detail: lastError || data?.error?.message || 'AI generation failed'
+      }, response?.status || 500)
     }
 
     const text = data.candidates?.[0]?.content?.parts?.[0]?.text || 'No response from AI.'
