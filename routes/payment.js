@@ -143,7 +143,7 @@ app.post('/', async (c) => {
           method: 'POST',
           body: JSON.stringify({
             plan_id: planId,
-            start_time: new Date(Math Date.now() + 60000).toISOString(),
+            start_time: new Date(Date.now() + 60000).toISOString(),
             subscriber: { email_address: user.email },
             custom_id: userId,
           }),
