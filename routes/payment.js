@@ -151,40 +151,56 @@ app.post('/', async (c) => {
         console.log(`[Payment] Subscription created: ${sub.id} for ${plan} user ${userId}`)
         return c.json({ subscriptionId: sub.id })
       } else {
-        // Fallback: create plan on-demand (less reliable)
-        // Create billing plan
-        const bp = await ppFetch(c.env, '/v1/billing/plans', {
+        // Fallback: create a PayPal product + billing plan on-demand.
+        // PayPal subscriptions require a product_id and pricing_scheme.fixed_price.
+        const product = await ppFetch(c.env, '/v1/catalogs/products', {
           method: 'POST',
           body: JSON.stringify({
-            name:        PLAN_LABELS[plan],
+            name: PLAN_LABELS[plan],
             description: PLAN_LABELS[plan],
-            type:        'INFINITE',
-            billing_cycles: [{
-              frequency: { interval_unit: 'MONTH', interval_count: 1 },
-              tenure:    'INFINITE',
-              sequence:   1,
-            }],
-            payment_preferences: {
-              auto_bill_outstanding: true,
-              setup_fee:            { currency_code: 'PHP', value: '0' },
-              initial_fail_amount_action: 'CONTINUE',
-            },
-            currency: { currency_code: 'PHP' },
-            amount:   { currency_code: 'PHP', value: PLAN_PRICES[plan] },
+            type: 'DIGITAL',
+            category: 'SOFTWARE',
           }),
         })
 
-        // Activate the plan
-        await ppFetch(c.env, `/v1/billing/plans/${bp.id}/activate`, { method: 'POST' })
+        const bp = await ppFetch(c.env, '/v1/billing/plans', {
+          method: 'POST',
+          body: JSON.stringify({
+            product_id: product.id,
+            name: PLAN_LABELS[plan],
+            description: PLAN_LABELS[plan],
+            status: 'ACTIVE',
+            billing_cycles: [{
+              frequency: { interval_unit: 'MONTH', interval_count: 1 },
+              tenure_type: 'REGULAR',
+              sequence: 1,
+              total_cycles: 0,
+              pricing_scheme: {
+                fixed_price: { currency_code: 'PHP', value: PLAN_PRICES[plan] },
+              },
+            }],
+            payment_preferences: {
+              auto_bill_outstanding: true,
+              setup_fee: { currency_code: 'PHP', value: '0' },
+              setup_fee_failure_action: 'CONTINUE',
+              payment_failure_threshold: 3,
+            },
+          }),
+        })
 
-        // Create subscription
         const sub = await ppFetch(c.env, '/v1/billing/subscriptions', {
           method: 'POST',
           body: JSON.stringify({
-            plan_id:     bp.id,
-            start_time:  new Date(Date.now() + 60000).toISOString(),
-            subscriber:  { email_address: user.email },
-            custom_id:   userId,
+            plan_id: bp.id,
+            start_time: new Date(Date.now() + 60000).toISOString(),
+            subscriber: { email_address: user.email },
+            custom_id: userId,
+            application_context: {
+              brand_name: 'Thyroxeia AI',
+              locale: 'en-US',
+              shipping_preference: 'NO_SHIPPING',
+              user_action: 'SUBSCRIBE_NOW',
+            },
           }),
         })
 
