@@ -83,8 +83,8 @@ async function handlePasswordUpdate() {
 async function handleForgotPassword() {`
     )
     .replace(oldPayPalContainer, newPayPalContainer)
-    .replace('thinking.innerHTML = data.reply\n      .replace', 'thinking.innerHTML = (data.reply || data.text || data.message || 'No response from AI.')\n      .replace')
-    .replace('content.innerHTML = data.guide\n      .replace', 'content.innerHTML = (data.guide || data.text || data.reply || 'No study guide returned.')\n      .replace')
+    .replace(`thinking.innerHTML = data.reply\n      .replace`, `thinking.innerHTML = (data.reply || data.text || data.message || 'No response from AI.')\n      .replace`)
+    .replace(`content.innerHTML = data.guide\n      .replace`, `content.innerHTML = (data.guide || data.text || data.reply || 'No study guide returned.')\n      .replace`)
     .replace(oldRenderStart, newRenderStart)
 }
 
