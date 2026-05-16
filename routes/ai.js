@@ -74,6 +74,22 @@ app.post('/', async (c) => {
       .gte('created_at', `${today}T00:00:00.000Z`)
     usedToday = count || 0
 
+    // Free users get one AI conversion/day for notes, PDFs, lecture notes, or video transcripts.
+    // Other free study modes still work inside their daily quota.
+    const bodyForLimit = await c.req.clone().json().catch(() => null)
+    const requestTypeForLimit = bodyForLimit?.type
+    if (userPlan === 'free' && requestTypeForLimit === 'generate-cards') {
+      const conversionsToday = usedToday
+      if ((conversionsToday || 0) >= 1) {
+        return c.json({
+          error: 'Free plan includes 1 AI conversion per day for notes, PDFs, lectures, or video transcripts. Upgrade for more conversions.',
+          plan: userPlan,
+          freeConversionLimit: 1,
+          used: conversionsToday || 0
+        }, 429)
+      }
+    }
+
     if (dailyLimit < 9999 && usedToday >= dailyLimit) {
       return c.json({
         error: `Daily limit reached (${dailyLimit} calls/day on ${userPlan} plan). Upgrade to get more AI calls.`,
@@ -99,11 +115,12 @@ app.post('/', async (c) => {
     const { type, payload } = body
     if (type === 'generate-cards') {
       const count = payload.count || 10
-      prompt = `You are a flashcard generator. Based on the following text or topic, generate exactly ${count} flashcards.
+      prompt = `You are a study material generator. Convert the following notes, text PDF content, lecture notes, video transcript/captions, or topic into a complete study pack.
+Generate exactly ${count} flashcards, plus a concise concept overview, key terms, practice questions, and a study guide.
 Return ONLY valid JSON in this exact format, no markdown, no extra text:
-{"cards":[{"q":"question","a":"answer"},...]}
+{"overview":"short general concept overview","keyTerms":[{"term":"term","definition":"definition"}],"cards":[{"q":"question","a":"answer"}],"practiceQuestions":[{"q":"question","a":"answer"}],"studyGuide":"concise study guide with memory tips"}
 
-Text/Topic:
+Source material:
 ${payload.text}`
     } else if (type === 'generate-quiz') {
       const cards = (payload.cards || []).map(c => `Q: ${c.q} | A: ${c.a}`).join('\n')
@@ -221,6 +238,14 @@ ${cards}`
         console.error('[AI Parse Error]', e.message, text.slice(0, 200))
         // Return raw text so frontend can handle gracefully
       }
+    }
+
+    if (type === 'chat') {
+      return c.json({ reply: text, text, remaining, used: usedToday + 1, limit: dailyLimit, plan: userPlan })
+    }
+
+    if (type === 'study-guide') {
+      return c.json({ guide: text, text, remaining, used: usedToday + 1, limit: dailyLimit, plan: userPlan })
     }
 
     return c.json({ text, remaining, used: usedToday + 1, limit: dailyLimit, plan: userPlan })
