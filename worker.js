@@ -31,6 +31,11 @@ function renderPayPal(plan) {
   }`
 
   return html
+    .replace(/📢 Server-wide shoutout/g, '🎉 Elite welcome banner')
+    .replace(/Server-wide shoutout/g, 'Elite welcome banner')
+    .replace(/Every user sees your welcome announcement when they log in\./g, 'Your Elite upgrade is celebrated with an in-app welcome banner.')
+    .replace(/Pro \+ gold username \+ shoutout \+ priority support/g, 'Pro + gold username + welcome banner + priority support')
+    .replace(/<p class="text-xs text-center mt-4" style="color:var\(--text3\)">🔒 Secure payment via PayPal\. Cancel anytime to stop future renewals\. No refunds for the current billing period\.<\/p>/g, '<p class="text-xs text-center mt-4" style="color:var(--text3)">🔒 Secure payment via PayPal. Cancel anytime to stop future renewals. No refunds for the current billing period.<br/>💜 Buying supports my business and helps keep Thyroxeia AI improving.</p>')
     .replace(/
 \s*timed:\s*\['student','pro','elite'\],/g, '')
     .replace(/
