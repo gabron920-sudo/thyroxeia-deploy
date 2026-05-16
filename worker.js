@@ -27,7 +27,7 @@ function renderPayPal(plan) {
   const noRefundsAck = document.getElementById('no-refunds-ack')
   if (!noRefundsAck || !noRefundsAck.checked) {
     container.innerHTML = '<div style="text-align:center;padding:16px;color:var(--text3);border:1px dashed var(--border);border-radius:12px">Check the no-refunds acknowledgement above to continue to PayPal.</div>'
-    return
+    return 
   }`
 
   return html
