@@ -17,6 +17,9 @@
     <!-- HTML2PDF -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 
+
+
+
     <style>
         body { font-family: 'Inter', sans-serif; background-color: #0f172a; color: #f8fafc; }
         .glass-panel { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.1); }
@@ -33,33 +36,7 @@
         ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
         ::-webkit-scrollbar-thumb:hover { background: #475569; }
 
+
+
+
         .loader { border-top-color: #3b82f6; animation: spinner 0.6s linear infinite; }
-        @keyframes spinner { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-
-        .shimmer { background: linear-gradient(90deg, #1e293b 25%, #334155 50%, #1e293b 75%); background-size: 200% 100%; animation: shimmer 1.5s infinite; }
-        @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
-
-        #page-app, #page-login, #page-landing, #page-dashboard, #page-study, #page-settings { display: none; }
-        .active { display: block !important; }
-
-        /* Mobile specific adjustments */
-        @media (max-width: 640px) { .mobile-hide { display: none; } }
-    </style>
-</head>
-<body class="min-h-screen">
-    <!-- Auth Pages will be injected or shown based on state -->
-    <div id="app-container">
-        <!-- CONTENT FROM PATCH -->
-        <div id="loading-screen" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950">
-             <div class="w-12 h-12 border-4 border-slate-800 border-t-blue-500 rounded-full animate-spin"></div>
-        </div>
-    </div>
-
-    <!-- MAIN APP STRUCTURE -->
-    <!-- ... (rest of the HTML content provided in the patch) ... -->
-
-    <script>
-        // ... (rest of the script content provided in the patch) ...
-    </script>
-</body>
-</html>
