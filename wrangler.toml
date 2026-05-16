@@ -1,1 +1,9 @@
-name = \"thyroxeia\"\nmain = \"worker.js\"\ncompatibility_date = \"2024-09-23\"\ncompatibility_flags = [\"nodejs_compat\"]\naccount_id = \"3c8e6479a51ea2c61bffd9386a3b80d7\"\n\n# Serve stable recovered frontend assets\n[assets]\ndirectory = \"./public_fixed2\"
+name = "thyroxeia"
+main = "worker.js"
+compatibility_date = "2024-09-23"
+compatibility_flags = ["nodejs_compat"]
+account_id = "3c8e6479a51ea2c61bffd9386a3b80d7"
+
+# Serve stable recovered frontend assets
+[assets]
+directory = "./public_fixed2"
