@@ -1,4 +1,4 @@
-"""<!DOCTYPE html>
+''<!DOCTYPE html>
 
 <html lang="en">
     
@@ -6,7 +6,71 @@
     
 <meta charset="UTF-8" />
     
-<meta name="viewport" content="width=device-width
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+    
+<title>Thyroxeia AI</title>
+
+<style>body{margin:0;background:#0a0a0f;color:#fff;font-family:Arial,sans-serif;display:flex;min-height:100vh;align-items:center;justify-content:center}.box{text-align:center}.spin{width:42px;height:42px;border:4px solid #1e293b;border-top-color:#7c3aed;border-radius:50%;animation:s 1s linear infinite;margin:0 auto 16px}@keyframes s{to{transform:rotate(360deg)}}</style>
+
+</head>
+
+<body>
+    
+<div class="box"><div class="spin"></div>div><div>Loading Thyroxeia AI...</div></div>
+
+<script>
+    
+(async()=>{
+    
+  const urls=[
+      
+    'https://raw.githubusercontent.com/gabron920-sudo/thyroxeia-deploy/main/__patch_public_restore_full_1778918971.html',
+      
+    'https://raw.githubusercontent.com/gabron920-sudo/thyroxeia-deploy/main/__patch_public_launch_ready_1778918071.html',
+      
+    'https://raw.githubusercontent.com/gabron920-sudo/thyroxeia-deploy/main/__patch_public_study_pack.html'
+      
+  ];
+    
+  let html=null;
+    
+  for(const u of urls){
+      
+    try{ const r=await fetch(u+\'?v=\'+Date.now(),{cache:\'no-store\'}); if(r.ok){ html=await r.text(); if(html.includes(\'page-app\')&&html.includes(\'handleLogin\')) break; } }catch(e){}
+                             
+                             }
+      
+  if(!html) throw new Error(\'Could not load app shell\');
+                            
+  document.open(); document.write(html); document.close();
+      
+  })().catch(e=>{document.body.innerHTML=\'<div style="padding:24px;color:white;background:#0a0a0f;font-family:Arial">Failed to load app. Please refresh.<br>\'+e.message+\'</div>\'})
+    
+    </script>
+    
+</body>
+    
+</html>html>''
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+</script></div>
+
+</body></style></title>
+
 
 
 </head>
