@@ -1,6 +1,6 @@
 /**
  * /ai — Gemini proxy with usage logging
- * Supports Gemini 1.5 Flash/Pro and rate limiting via Supabase
+ * Compatible with Cloudflare Workers / Hono
  */
 import { Hono } from 'hono'
 import { createClient } from '@supabase/supabase-js'
@@ -8,6 +8,7 @@ import { GoogleGenerativeAI } from '@google/generative-ai'
 
 const app = new Hono()
 
+// Role-based access for AI features
 const FEATURE_ACCESS = {
   'ai_study_pack': ['plus', 'pro', 'elite'],
   'ai_tutor': ['pro', 'elite'],
@@ -15,8 +16,9 @@ const FEATURE_ACCESS = {
 }
 
 function isAllowed(plan, type) {
-  if (!type) return true // default allow
-  return (FEATURE_ACCESS[type] || []).includes(plan)
+  if (!type) return true;
+  const allowedPlans = FEATURE_ACCESS[type] || [];
+  return allowedPlans.includes(plan);
 }
 
 app.post('/', async (c) => {
@@ -29,55 +31,67 @@ app.post('/', async (c) => {
   const { data: { user }, error: authError } = await supabase.auth.getUser(token)
   if (authError || !user) return c.json({ error: 'Invalid token' }, 401)
 
-  const { prompt, model = 'gemini-1.5-flash', history = [], type } = await c.req.json()
+  let body;
+  try {
+    body = await c.req.json();
+  } catch (e) {
+    return c.json({ error: 'Invalid JSON body' }, 400);
+  }
 
-  // Fetch user profile for plan
+  const { prompt, model = 'gemini-1.5-flash', history, type } = body;
+
+  // Fetch user profile for plan check
   const { data: profile } = await supabase
     .from('profiles')
-    .select('plan, email')
+    .select('plan')
     .eq('id', user.id)
     .single()
 
-  const plan = profile?.plan || 'free'
+  const userPlan = profile?.plan || 'free'
 
-  if (!isAllowed(plan, type)) {
-    return c.json({ error: 'Upgrade required for this AI feature' }, 403)
+  if (!isAllowed(userPlan, type)) {
+    return c.json({ error: 'Feature not included in your plan' }, 403)
+  }
+
+  // Check quota
+  const today = new Date().toISOString().split('T')[0]
+  const { data: usage } = await supabase
+    .from('ai_usage')
+    .select('count')
+    .eq('user_id', user.id)
+    .eq('date', today)
+    .single()
+
+  const dailyLimit = (userPlan === 'free') ? 5 : 100
+  if (usage && usage.count >= dailyLimit) {
+    return c.json({ error: 'Daily quota exceeded' }, 429)
   }
 
   try {
     const genAI = new GoogleGenerativeAI(c.env.GEMINI_API_KEY)
     const geminiModel = genAI.getGenerativeModel({ model })
 
-    const chat = geminiModel.startChat({
-      history: history.map(h => ({
-        role: h.role === 'assistant' ? 'model' : 'user',
-        parts: [{ text: h.content }]
-      }))
-    })
+    let result;
+    if (history) {
+      const chat = geminiModel.startChat({ history });
+      result = await chat.sendMessage(prompt);
+    } else {
+      result = await geminiModel.generateContent(prompt);
+    }
+    
+    const responseText = result.response.text()
 
-    const result = await chat.sendMessage(prompt)
-    const response = await result.response
-    const text = response.text()
-
-    // Log usage non-fatally
-    try {
-      await supabase.from('ai_usage_logs').insert({
-        user_id: user.id,
-        email: profile?.email,
-        model,
-        feature_type: type,
-        prompt_length: prompt.length,
-        response_length: text.length,
-        plan
-      })
-    } catch (logError) {
-      console.error('Usage logging failed:', logError)
+    // Log usage (non-blocking)
+    if (usage) {
+      await supabase.from('ai_usage').update({ count: usage.count + 1 }).eq('user_id', user.id).eq('date', today)
+    } else {
+      await supabase.from('ai_usage').insert({ user_id: user.id, date: today, count: 1 })
     }
 
-    return c.json({ text })
+    return c.json({ text: responseText })
   } catch (err) {
     console.error('AI Error:', err)
-    return c.json({ error: 'AI request failed' }, 500)
+    return c.json({ error: 'AI processing failed', details: err.message }, 500)
   }
 })
 
