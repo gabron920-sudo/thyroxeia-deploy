@@ -36,10 +36,8 @@ function renderPayPal(plan) {
     .replace(/Every user sees your welcome announcement when they log in\./g, 'Your Elite upgrade is celebrated with an in-app welcome banner.')
     .replace(/Pro \+ gold username \+ shoutout \+ priority support/g, 'Pro + gold username + welcome banner + priority support')
     .replace(/<p class="text-xs text-center mt-4" style="color:var\(--text3\)">🔒 Secure payment via PayPal\. Cancel anytime to stop future renewals\. No refunds for the current billing period\.<\/p>/g, '<p class="text-xs text-center mt-4" style="color:var(--text3)">🔒 Secure payment via PayPal. Cancel anytime to stop future renewals. No refunds for the current billing period.<br/>💜 Buying supports my business and helps keep Thyroxeia AI improving.</p>')
-    .replace(/
-\s*timed:\s*\['student','pro','elite'\],/g, '')
-    .replace(/
-\s*type:\s*\['student','pro','elite'\],/g, '')
+    .replace(/\n\s*timed:\s*\['student','pro','elite'\],/g, '')
+    .replace(/\n\s*type:\s*\['student','pro','elite'\],/g, '')
     .replace(/\s*timed:\s*\['student','pro','elite'\],/g, '')
     .replace(/\s*type:\s*\['student','pro','elite'\],/g, '')
     .replace('const PLAN_LIMITS = { free: 25, student: 60, pro: 150, elite: 300 }', 'const PLAN_LIMITS = { free: 15, student: 40, pro: 80, elite: 120 }')
