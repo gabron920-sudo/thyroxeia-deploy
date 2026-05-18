@@ -1,15 +1,1 @@
-name = "thyroxeia"
-
-main = "worker-clean5.js"
-
-compatibility_date = "2024-09-23"
-
-compatibility_flags = ["nodejs_compat"]
-
-account_id = "3c8e6479a51ea2c61bffd9386a3b80d7"
-
-
-
-[assets]
-
-directory = "./public_fixed12"
+name = "thyroxeia"\n\nmain = "worker-clean6.js"\n\ncompatibility_date = "2024-09-23"\n\ncompatibility_flags = [ "nodejs_compat" ]\n\naccount_id = "3c8e6479a51ea2c61bffd9386a3b80d7"\n\n\n\n[assets]\n\ndirectory = "./public_fixed12"
