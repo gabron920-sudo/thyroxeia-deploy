@@ -1,1 +1,1 @@
-name = "thyroxeia"\nmain = "worker-clean3.js"\ncompatibility_date = "2024-09-23"\ncompatibility_flags = ["nodejs_compat"]\naccount_id = "3c8e6479a51ea2c61bffd9386a3b80d7"\n\n[assets]\ndirectory = "./public_fixed10"
+name = "thyroxeia"\nmain = "worker-clean3.js"\ncompatibility_date = "2024-09-23"\ncompatibility_flags = ["nodejs_compat"]\naccount_id = "3c8e6479a51ea2c61bffd9386a3b80d7"\n\n[assets]\ndirectory = "./public_fixed11"
