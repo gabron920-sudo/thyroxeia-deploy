@@ -1,1 +1,8 @@
+name = "thyroxeia"
+main = "worker-clean-lite.js"
+compatibility_date = "2024-09-23"
+compatibility_flags = ["nodejs_compat"]
+account_id = "3c8e6479a51ea2c61bffd9386a3b80d7"
 
+[assets]
+directory = "./public_fixed12"
