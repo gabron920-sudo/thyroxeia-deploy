@@ -14,7 +14,7 @@
 <script>
 async function loadPayPalSDK() {
   try {
-    const res = await fetch('/api/paypal-config')
+    const res = await fetch('https://thyroxeia.fancy-sky-31cf.workers.dev/api/paypal-config')
     if (!res.ok) throw new Error('PayPal config unavailable')
     const { clientId, currency, intent } = await res.json()
     const script = document.createElement('script')
