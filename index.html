@@ -14,7 +14,7 @@
 <script>
 async function loadPayPalSDK() {
   try {
-    const res = await fetch('https://thyroxeia-ai.fancy-sky-31cf.workers.dev/api/paypal-config')
+    const res = await fetch('https://thyroxeia.fancy-sky-31cf.workers.dev/api/paypal-config')
     if (!res.ok) throw new Error('PayPal config unavailable')
     const { clientId, currency, intent } = await res.json()
     const script = document.createElement('script')
@@ -712,9 +712,9 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',system-ui,sans-s
 <script>
 // ─── BACKEND ENDPOINTS ────────────────────────────────────────────────────
 const BACKEND = {
-  AI:         'https://thyroxeia-ai.fancy-sky-31cf.workers.dev/ai',
-  PAYMENT:    'https://thyroxeia-ai.fancy-sky-31cf.workers.dev/payment',
-  AUTH_EMAIL: 'https://thyroxeia-ai.fancy-sky-31cf.workers.dev/auth',
+  AI:         'https://thyroxeia.fancy-sky-31cf.workers.dev/ai',
+  PAYMENT:    'https://thyroxeia.fancy-sky-31cf.workers.dev/payment',
+  AUTH_EMAIL: 'https://thyroxeia.fancy-sky-31cf.workers.dev/auth',
 }
 // All AI calls go through the secure backend — no direct browser→Gemini calls
 const _BACKEND_READY = true
