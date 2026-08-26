@@ -910,10 +910,10 @@ function switchTab(tab) {
 
 // GOOGLE LOGIN — Supabase OAuth (requires Google provider enabled in Supabase + redirect URL allowlisted)
 function handleGoogleLogin() {
-  const origin = window.location.origin
+  const redirectTo = window.location.origin + window.location.pathname
   sb.auth.signInWithOAuth({
     provider: 'google',
-    options: { redirectTo: origin + '/' }
+    options: { redirectTo }
   }).catch((err) => toast('Google sign-in failed: ' + (err?.message || 'network error'), 'error'))
 }
 
