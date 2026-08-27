@@ -909,8 +909,14 @@ function switchTab(tab) {
 }
 
 // GOOGLE LOGIN — Supabase OAuth (requires Google provider enabled in Supabase + redirect URL allowlisted)
+// Redirect URL MUST end with '/' — GitHub Pages 301-normalizes a subpath to its trailing-slash form,
+// and a server redirect DROPS the #access_token fragment, so the session is lost if we omit the slash.
+function oauthRedirect() {
+  const base = window.location.origin + window.location.pathname
+  return base.endsWith('/') ? base : base + '/'
+}
 function handleGoogleLogin() {
-  const redirectTo = window.location.origin + window.location.pathname
+  const redirectTo = oauthRedirect()
   sb.auth.signInWithOAuth({
     provider: 'google',
     options: { redirectTo }
@@ -949,7 +955,7 @@ async function handleForgotPassword() {
   const btn = document.querySelector('[onclick="handleForgotPassword()"]')
   if (btn) { btn.disabled = true; btn.textContent = 'Sending...' }
   const { error } = await sb.auth.resetPasswordForEmail(email, {
-    redirectTo: window.location.origin + window.location.pathname
+    redirectTo: oauthRedirect()
   })
   if (btn) { btn.disabled = false; btn.textContent = 'Forgot password?' }
   if (error) { toast(error.message, 'error') }
