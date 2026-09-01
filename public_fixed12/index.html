@@ -978,9 +978,14 @@ async function handleSignup(e) {
   const last  = document.getElementById('signup-last').value
 
   // Step 1: Supabase creates user & sends their OTP
+  // emailRedirectTo MUST end with '/' so the confirmation link returns to the trailing-slash URL,
+  // which GitHub Pages serves with HTTP 200 (no 301) and therefore keeps the session token.
   const { data, error } = await sb.auth.signUp({
     email, password: pass,
-    options: { data: { first_name: first, last_name: last, full_name: `${first} ${last}` } }
+    options: {
+      data: { first_name: first, last_name: last, full_name: `${first} ${last}` },
+      emailRedirectTo: oauthRedirect()
+    }
   })
 
   btn.disabled = false; btn.textContent = '✨ Create Account'
