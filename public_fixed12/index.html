@@ -437,7 +437,11 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',system-ui,sans-s
           <option value="other">✨ Other</option>
         </select>
       </div>
-      <button class="btn btn-primary w-full mt-2" type="submit" id="signup-btn">✨ Create Account</button>
+            <label id="signup-agree-wrap" style="display:flex;gap:10px;align-items:flex-start;background:rgba(139,92,246,.08);border:1px solid rgba(139,92,246,.25);border-radius:12px;padding:12px;margin:4px 0 14px;cursor:pointer">
+        <input type="checkbox" id="signup-agree" style="margin-top:2px;accent-color:#8b5cf6" />
+        <span class="text-xs" style="color:var(--text2);line-height:1.5">I agree to the <a href="terms.html" target="_blank" style="color:var(--accent)">Terms of Service</a>, <a href="privacy.html" target="_blank" style="color:var(--accent)">Privacy Policy</a> and <a href="refund.html" target="_blank" style="color:var(--accent)">Refund Policy</a>. If I am under 18, I confirm that my parent or legal guardian has reviewed and agrees to these terms on my behalf.</span>
+      </label>
+<button class="btn btn-primary w-full mt-2" type="submit" id="signup-btn">✨ Create Account</button>
     </form>
     <button class="btn btn-ghost w-full mt-4" onclick="showPage('landing')" style="color:var(--text3)">← Back to Home</button>
   </div>
@@ -971,6 +975,7 @@ async function handleSignup(e) {
   const conf = document.getElementById('signup-confirm').value
   if (pass !== conf) { toast('Passwords do not match!', 'error'); return }
   if (pass.length < 8) { toast('Password must be 8+ characters', 'error'); return }
+  if (!document.getElementById('signup-agree')?.checked) { toast('Please agree to the Terms of Service and Privacy Policy to create an account.', 'error'); return }
 
   btn.disabled = true; btn.textContent = 'Creating account...'
 
@@ -984,7 +989,7 @@ async function handleSignup(e) {
   const { data, error } = await sb.auth.signUp({
     email, password: pass,
     options: {
-      data: { first_name: first, last_name: last, full_name: `${first} ${last}` },
+      data: { first_name: first, last_name: last, full_name: `${first} ${last}`, terms_accepted_at: new Date().toISOString(), terms_version: '2026-10', terms_accepted: true },
       emailRedirectTo: oauthRedirect()
     }
   })
