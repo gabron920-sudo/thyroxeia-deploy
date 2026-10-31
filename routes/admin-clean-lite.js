@@ -7,7 +7,9 @@
  *   ADMIN_EMAILS   comma-separated list, e.g. owner@example.com,backup@example.com
  *
  * Endpoints:
- *   GET /admin/stats
+ *   GET  /admin/stats
+ *   GET  /admin/gemini-key-health
+ *   GET  /admin/payment-config   (booleans only — confirms PayPal is wired up)
  */
 
 import { Hono } from 'hono'
@@ -77,6 +79,29 @@ async function testGeminiKey(key, model = 'gemini-2.0-flash-lite') {
   }
 }
 
+// ── PayPal configuration probe ────────────────────────────────────────────────
+// Returns booleans only — never a secret value. Confirms the Worker has every
+// setting the subscription flow needs, and that the credential pair still works
+// against the mode (live/sandbox) the Worker is configured for.
+async function probePayPal(env) {
+  const base = env.PAYPAL_MODE === 'sandbox'
+    ? 'https://api-m.sandbox.paypal.com'
+    : 'https://api-m.paypal.com'
+  try {
+    const res = await fetch(`${base}/v1/oauth2/token`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'Authorization': 'Basic ' + btoa(`${env.PAYPAL_CLIENT_ID}:${env.PAYPAL_CLIENT_SECRET}`),
+      },
+      body: 'grant_type=client_credentials',
+    })
+    return { ok: res.ok, status: res.status }
+  } catch (err) {
+    return { ok: false, error: err?.message || 'request failed' }
+  }
+}
+
 app.get('/gemini-key-health', async (c) => {
   const { error, status } = await getAdmin(c)
   if (error) return c.json({ error }, status)
@@ -94,6 +119,52 @@ app.get('/gemini-key-health', async (c) => {
     totalConfigured: names.length,
     ok: results.filter(r => r.status === 'ok').length,
     results
+  })
+})
+
+// ── GET /payment-config ───────────────────────────────────────────────────────
+// Owner-only. Answers "is PayPal actually wired up?" without exposing any value.
+app.get('/payment-config', async (c) => {
+  const admin = await getAdmin(c)
+  if (admin.error) return c.json({ error: admin.error }, admin.status)
+
+  const has = (name) => Boolean(c.env[name])
+  const planIds = {
+    student: has('PAYPAL_STUDENT_PLAN_ID'),
+    pro:     has('PAYPAL_PRO_PLAN_ID'),
+    elite:   has('PAYPAL_ELITE_PLAN_ID'),
+  }
+
+  const missing = []
+  if (!has('PAYPAL_CLIENT_ID'))     missing.push('PAYPAL_CLIENT_ID')
+  if (!has('PAYPAL_CLIENT_SECRET')) missing.push('PAYPAL_CLIENT_SECRET')
+  for (const [plan, present] of Object.entries(planIds)) {
+    if (!present) missing.push(`PAYPAL_${plan.toUpperCase()}_PLAN_ID`)
+  }
+  if (!has('PAYPAL_WEBHOOK_ID')) missing.push('PAYPAL_WEBHOOK_ID')
+
+  const credentials = (has('PAYPAL_CLIENT_ID') && has('PAYPAL_CLIENT_SECRET'))
+    ? await probePayPal(c.env)
+    : { ok: false, error: 'credentials not set' }
+
+  return c.json({
+    // Mode matters: sandbox credentials only work against sandbox.paypal.com.
+    mode: c.env.PAYPAL_MODE === 'sandbox' ? 'sandbox' : 'live',
+    credentials,
+    planIds,
+    hasWebhookId: has('PAYPAL_WEBHOOK_ID'),
+    // A purchase can complete without plan IDs (the server falls back to the plan
+    // name, then the PHP price), so only the credential pair is truly required.
+    // Plan IDs are what make the resolution exact instead of best-effort.
+    readyForPayments: Boolean(credentials.ok),
+    planIdsConfigured: Object.values(planIds).every(Boolean),
+    missing,
+    nextSteps: missing.length ? [
+      'Plan IDs come from developer.paypal.com → your app → Products & Plans (values start with P-).',
+      'Webhook ID comes from developer.paypal.com → your app → Webhooks (values start with WH-). Point it at /payment/webhook.',
+      'Set each with: npx wrangler secret put <NAME>',
+      'After changing a secret, redeploy is not needed — secrets are read at runtime.',
+    ] : [],
   })
 })
 

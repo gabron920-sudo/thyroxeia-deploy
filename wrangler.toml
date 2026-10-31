@@ -1,8 +1,25 @@
-name = "thyroxeia"
+name = "thyroxeia-ai"
 main = "worker-clean-lite.js"
 compatibility_date = "2024-09-23"
 compatibility_flags = ["nodejs_compat"]
 account_id = "3c8e6479a51ea2c61bffd9386a3b80d7"
 
+# Preserved verbatim from the live plain-text binding, otherwise the deploy would
+# drop it and CORS would break the GitHub Pages frontend.
+[vars]
+ALLOWED_ORIGINS = "https://gabron920-sudo.github.io,https://thyroxeia.fancy-sky-31cf.workers.dev,https://thyroxeia-ai.fancy-sky-31cf.workers.dev,http://thyroxeia.qd.je,https://thyroxeia.qd.je,http://thyrotheia.qd.je,https://thyrotheia.qd.je"
+
 [assets]
 directory = "./public_fixed12"
+
+# Durable per-key rate limits (Cloudflare Rate Limiting bindings).
+# The binding only supports 10s/60s windows, so daily quotas stay in Supabase.
+[[ratelimits]]
+name = "AI_RATE_LIMITER"
+namespace_id = "1001"
+simple = { limit = 20, period = 60 }
+
+[[ratelimits]]
+name = "AI_IP_LIMITER"
+namespace_id = "1002"
+simple = { limit = 120, period = 60 }
