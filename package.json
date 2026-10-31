@@ -5,13 +5,15 @@
   "type": "module",
   "scripts": {
     "dev": "wrangler dev",
-    "deploy": "wrangler deploy"
+    "deploy": "wrangler deploy",
+    "test": "node tests/ai-validation.test.mjs && node tests/payment.test.mjs && node tests/no-html-strings.test.mjs && node tests/security-smoke.mjs"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.43.0",
     "hono": "^4.4.0",
-    "@supabase/supabase-js": "^2.43.0"
+    "zod": "^4.6.7"
   },
   "devDependencies": {
-    "wrangler": "^3.60.0"
+    "wrangler": "^4.156.0"
   }
 }

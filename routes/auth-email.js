@@ -20,21 +20,35 @@
 import { Hono } from 'hono'
 import { createClient } from '@supabase/supabase-js'
 
-// ── OTP rate limiting — uses existing otp_codes.created_at (no extra columns needed)
-// Allows max 5 verify attempts per OTP, tracked via a simple counter in-row
-async function checkOtpAttempts(sb, userId) {
-  // Count how many times this OTP has been attempted by checking created_at recency
-  // Simple approach: if OTP exists and is not expired, allow attempt (max 10 tries)
-  const { data } = await sb.from('otp_codes')
-    .select('created_at')
-    .eq('user_id', userId)
-    .eq('used', false)
-    .single()
-  if (!data) return true // no OTP = nothing to rate limit
-  return true // Expiry (10 min) is the primary protection
+// ── OTP rate limiting ─────────────────────────────────────────────────────────
+// A verification code may be guessed at most OTP_MAX_ATTEMPTS times. The counter
+// lives on the otp_codes row (service-role only) and is reset when a new code is
+// issued, so the limit survives Worker restarts and cannot be bypassed by
+// reconnecting. When the budget is spent the code is burned and the user must
+// request a fresh one.
+const OTP_MAX_ATTEMPTS = 5
+
+function hashesMatch(a, b) {
+  if (typeof a !== 'string' || typeof b !== 'string' || a.length !== b.length) return false
+  let diff = 0
+  for (let i = 0; i < a.length; i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i)
+  return diff === 0
 }
-async function clearOtpAttempts(sb, userId) {
-  // No-op — OTP is marked used which is sufficient
+
+async function burnOtp(sb, userId) {
+  const { error } = await sb.from('otp_codes').update({ used: true }).eq('user_id', userId)
+  if (error) console.error('[OTP] Could not burn code:', error.message)
+}
+
+async function recordFailedAttempt(sb, userId, attempts) {
+  const next = attempts + 1
+  const patch = next >= OTP_MAX_ATTEMPTS ? { attempts: next, used: true } : { attempts: next }
+  const { error } = await sb.from('otp_codes').update(patch).eq('user_id', userId)
+  if (error) {
+    // Failing open here would silently disable the limit, so make it loud.
+    console.error('[OTP] Attempt counter update failed (did the migration run?):', error.message)
+  }
+  return next
 }
 
 const app = new Hono()
@@ -192,6 +206,12 @@ app.post('/send-otp', async (c) => {
     }, { onConflict: 'user_id' })
     if (upsertErr) throw new Error(upsertErr.message)
 
+    // Reset the failed-attempt counter for the new code. Done as a separate update so
+    // that sign-up keeps working even before the hardened migration (which adds the
+    // column) has been applied.
+    const { error: resetErr } = await sb.from('otp_codes').update({ attempts: 0 }).eq('user_id', user.id)
+    if (resetErr) console.warn('[OTP] Could not reset attempt counter (has supabase_migration.sql been run?):', resetErr.message)
+
     await sendEmail(c.env, email, '⚡ Your Thyroxeia AI verification code', verificationTemplate(firstName || '', otp))
 
     console.log(`[OTP] Sent to ${email}, expires ${expiresAt}`)
@@ -225,19 +245,25 @@ app.post('/verify-otp', async (c) => {
       return c.json({ error: 'Verification code has expired. Please request a new one.' }, 400)
     }
 
-    if (!await checkOtpAttempts(sb, user.id)) {
+    const attempts = Number(data.attempts || 0)
+    if (attempts >= OTP_MAX_ATTEMPTS) {
+      await burnOtp(sb, user.id)
       return c.json({ error: 'Too many attempts. Please request a new code.' }, 429)
     }
 
     const hashBuf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(otp))
     const inputHash = Array.from(new Uint8Array(hashBuf)).map(b => b.toString(16).padStart(2, '0')).join('')
 
-    if (data.otp_hash !== inputHash) {
-      return c.json({ error: 'Incorrect verification code.' }, 400)
+    if (!hashesMatch(data.otp_hash, inputHash)) {
+      const used = await recordFailedAttempt(sb, user.id, attempts)
+      const remaining = Math.max(0, OTP_MAX_ATTEMPTS - used)
+      if (remaining === 0) {
+        return c.json({ error: 'Too many attempts. Please request a new code.', attemptsRemaining: 0 }, 429)
+      }
+      return c.json({ error: `Incorrect verification code. ${remaining} attempt${remaining === 1 ? '' : 's'} remaining.`, attemptsRemaining: remaining }, 400)
     }
 
     await sb.from('otp_codes').update({ used: true }).eq('user_id', user.id)
-    await clearOtpAttempts(sb, user.id)
 
     console.log(`[OTP] ✅ Verified for user ${user.id}`)
     return c.json({ success: true })
