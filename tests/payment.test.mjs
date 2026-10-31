@@ -119,5 +119,45 @@ check('still-paid period keeps the plan without calling PayPal', r.plan === 'pro
 r = await reconcileIfStale(stubSb(), env, 'u1', { plan: 'pro', current_period_end: past, paypal_subscription_id: null })
 check('expired but no subscription id cannot be re-checked (no crash)', r.plan === 'pro' && r.changed === false)
 
+
+// ── End-to-end of the downgrade branch, with PayPal stubbed (no network) ──────
+const realFetch = globalThis.fetch
+function stubPayPal(subscription, { fail = false } = {}) {
+  globalThis.fetch = async (url) => {
+    const u = String(url)
+    if (fail) throw new Error('network down')
+    if (u.includes('/v1/oauth2/token')) return new Response(JSON.stringify({ access_token: 't' }), { status: 200 })
+    if (u.includes('/v1/billing/subscriptions/')) return new Response(JSON.stringify(subscription), { status: 200 })
+    throw new Error('unexpected fetch ' + u)
+  }
+}
+const expired = new Date(Date.now() - 86400000).toISOString()
+
+let cap1 = []
+stubPayPal({ status: 'CANCELLED', plan_id: 'P-PRO', custom_id: 'u1' })
+let r1 = await reconcileIfStale(stubSb({ plan: 'pro', updates: cap1 }), env, 'u1', { plan: 'pro', current_period_end: expired, paypal_subscription_id: 'I-DEAD' })
+globalThis.fetch = realFetch
+check('cancelled subscriber is downgraded to free', r1.plan === 'free' && r1.changed === true, JSON.stringify(r1))
+check('downgrade writes plan=free', cap1[0]?.patch.plan === 'free', JSON.stringify(cap1[0]?.patch))
+
+let cap2 = []
+stubPayPal({ status: 'ACTIVE', plan_id: 'P-PRO', custom_id: 'u1', billing_info: { next_billing_time: '2099-01-01T00:00:00Z' } })
+let r2 = await reconcileIfStale(stubSb({ plan: 'pro', updates: cap2 }), env, 'u1', { plan: 'pro', current_period_end: expired, paypal_subscription_id: 'I-LIVE' })
+globalThis.fetch = realFetch
+check('renewed subscriber keeps the plan', r2.plan === 'pro' && r2.changed === false, JSON.stringify(r2))
+check('renewal refreshes the period end', cap2[0]?.patch.current_period_end === '2099-01-01T00:00:00Z', JSON.stringify(cap2[0]?.patch))
+
+let cap3 = []
+stubPayPal({ status: 'CANCELLED', plan_id: 'P-PRO', custom_id: 'someone-else' })
+let r3 = await reconcileIfStale(stubSb({ plan: 'elite', updates: cap3 }), env, 'u1', { plan: 'elite', current_period_end: expired, paypal_subscription_id: 'I-OTHER' })
+globalThis.fetch = realFetch
+check('foreign subscription cannot downgrade you', r3.plan === 'elite' && cap3.length === 0)
+
+let cap4 = []
+stubPayPal(null, { fail: true })
+let r4 = await reconcileIfStale(stubSb({ plan: 'elite', updates: cap4 }), env, 'u1', { plan: 'elite', current_period_end: expired, paypal_subscription_id: 'I-X' })
+globalThis.fetch = realFetch
+check('PayPal outage never downgrades a payer', r4.plan === 'elite' && cap4.length === 0)
+
 console.log(failed === 0 ? '\nAll payment tests passed.' : `\n${failed} test(s) failed.`)
 process.exit(failed === 0 ? 0 : 1)
