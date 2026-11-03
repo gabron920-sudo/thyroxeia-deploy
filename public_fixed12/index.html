@@ -741,10 +741,13 @@ const _BACKEND_READY = true
 // (the Worker's CORS allows that origin). RLS still applies: the caller's own
 // session token is forwarded unchanged on every request.
 const WORKER_ORIGIN = 'https://thyroxeia-ai.fancy-sky-31cf.workers.dev'
-// Same-origin whenever the Worker serves the page (workers.dev, custom domain,
-// local dev). GitHub Pages can't proxy /sb, so it falls back to the Worker origin,
-// which is covered by the Worker's CORS allowlist.
-const SERVED_BY_WORKER = !location.hostname.endsWith('github.io')
+// Supabase is reached through the Worker's /sb proxy. Only hosts that the Worker
+// actually serves may use same-origin; anything else (GitHub Pages, a CNAME like
+// thyroxeia.qd.je that points at Pages) must go through WORKER_ORIGIN, which is
+// covered by the Worker's CORS allowlist. Add a host here when you attach a new
+// custom domain to the Worker.
+const WORKER_HOSTS = ['thyroxeia-ai.fancy-sky-31cf.workers.dev', 'heymino.fancy-sky-31cf.workers.dev']
+const SERVED_BY_WORKER = WORKER_HOSTS.includes(location.hostname) || location.hostname === 'localhost' || location.hostname === '127.0.0.1'
 const SUPABASE_URL  = (SERVED_BY_WORKER ? location.origin : WORKER_ORIGIN) + '/sb'
 const SUPABASE_ANON = 'public-anon-key'   // placeholder only; the real key never leaves the Worker
 const { createClient } = supabase
